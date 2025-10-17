@@ -1,0 +1,9 @@
+# Test dependencies for the project
+pytest
+pytest-cov
+pytest-mock
+pytest-asyncio
+pytest-fixtures
+coverage
+pytest-html
+pytest-json-report

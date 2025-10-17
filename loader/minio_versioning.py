@@ -1,6 +1,4 @@
 """
-MinIO Document Versioning System for RAG Prototype
-
 This module provides document versioning capabilities using MinIO object storage.
 It stores original documents with version control and maintains metadata about
 document versions and their relationship to vector store chunks.

@@ -29,5 +29,4 @@ Once logged in you can try the App by uploading documents in the upload document
 Note: Since this is a development example, the reasoning of the model is shown in the output. This can be changed ...
 
 ## Open Topics
-- Automated aming of chats 
-- Tests need to be extended
+- Automated naming of chats 

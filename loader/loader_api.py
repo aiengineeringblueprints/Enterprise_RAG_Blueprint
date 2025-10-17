@@ -610,24 +610,6 @@ async def list_document_sources():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing sources: {str(e)}")
 
-@app.post("/create_test_documents")
-async def create_test_documents():
-    """
-    Create test documents in the vectorstore for development/testing purposes
-    """
-    try:
-        from vector_store import create_test_documents_in_vectorstore
-        
-        result = create_test_documents_in_vectorstore()
-        return {
-            "message": "Successfully created test documents",
-            "result": result,
-            "success": True
-        }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating test documents: {str(e)}")
-
 @app.get("/minio/status")
 async def get_minio_status_endpoint():
     """Check MinIO connection and configuration status."""
