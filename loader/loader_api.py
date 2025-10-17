@@ -608,7 +608,13 @@ async def list_document_sources():
             "success": True
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error listing sources: {str(e)}")
+        logger.error(f"Error listing sources: {str(e)}")
+        return {
+            "total_sources": 0,
+            "sources": [],
+            "success": False,
+            "error": str(e)
+        }
 
 @app.get("/minio/status")
 async def get_minio_status_endpoint():
@@ -637,7 +643,13 @@ async def list_minio_objects():
             "objects": objects
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error listing MinIO objects: {str(e)}")
+        logger.error(f"Error listing MinIO objects: {str(e)}")
+        return {
+            "bucket_name": "unknown",
+            "total_objects": 0,
+            "objects": [],
+            "error": str(e)
+        }
 
 @app.get("/document_versions/{document_name}")
 async def get_document_versions(document_name: str, document_tag: str = "General"):

@@ -1,9 +1,8 @@
 import os
 import uvicorn
 import logging
-import traceback
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Union
 from prompts.promt_manager import PromptKey
 from check_answers_llm import check_answer_with_second_llm, check_answer_with_keywords
@@ -14,25 +13,25 @@ LLM_SOURCE_CHECK = os.getenv("LLM_SOURCE_CHECK")
 
 app = FastAPI()
 class QuestionRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1)
     prompt_key: Union[PromptKey, str] = PromptKey.SOURCE
     used_model: str = LLM_SOURCE_ANSWER
     show_sources: bool = True
     user_roles: list = ["General"]
 
 class QuestionCheckRequest(BaseModel):
-    question: str
-    answer: str
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
     relevant_documents: list[str]
     prompt_key: Union[PromptKey, str] = PromptKey.CHECK
     used_model: str = LLM_SOURCE_CHECK    
     question_prompt_key: Union[PromptKey, str] = PromptKey.SOURCE
 
 class KeywordCheckRequest(BaseModel):
-    question: str
-    answer: str
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
     expected_keywords: list[str] = []
-    threshold: float = 0.6
+    threshold: float = Field(default=0.6, ge=0.0, le=1.0)
 
 @app.post("/call_llm")
 async def call_llm_endpoint(request: QuestionRequest):
@@ -40,7 +39,10 @@ async def call_llm_endpoint(request: QuestionRequest):
         # Convert string to PromptKey if needed
         prompt_key = request.prompt_key
         if isinstance(prompt_key, str):
-            prompt_key = PromptKey(prompt_key)
+            try:
+                prompt_key = PromptKey(prompt_key)
+            except ValueError:
+                raise HTTPException(status_code=422, detail=f"Invalid prompt_key: {prompt_key}")
             
         result, relevant_documents, prompt_key_result = call_llm(
             question=request.question,
@@ -54,6 +56,8 @@ async def call_llm_endpoint(request: QuestionRequest):
             "relevant_documents": relevant_documents,
             "prompt_key": prompt_key_result.value if hasattr(prompt_key_result, "value") else str(prompt_key_result)
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logging.exception("/call_llm failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
@@ -79,6 +83,8 @@ async def check_answer_endpoint(request: QuestionCheckRequest):
             used_model=request.used_model if request.used_model else LLM_SOURCE_CHECK,
         )
         return {"evaluation": evaluation}
+    except HTTPException:
+        raise
     except Exception as e:
         logging.exception("/check_answer failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
