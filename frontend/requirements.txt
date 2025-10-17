@@ -1,0 +1,9 @@
+streamlit
+streamlit-extras
+tqdm
+langchain-core
+langchain-community
+langchain-text-splitters
+unstructured
+pypdf
+dotenv

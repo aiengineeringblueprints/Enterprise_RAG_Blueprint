@@ -1,0 +1,14 @@
+uvicorn
+fastapi
+pydantic
+jinja2
+langchain
+langchain-openai
+langchain-core
+langchain-ollama
+langchain-community
+langchain-chroma
+chromadb
+tqdm
+dotenv
+logging

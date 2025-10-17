@@ -1,0 +1,126 @@
+services:
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    user: "root"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - chain
+      - loader
+      - minio
+    networks:
+      - rag_network
+    env_file: ".env"
+
+  chain:
+    build: ./chain
+    container_name: chain
+    volumes:
+      - ./chain:/app
+      - rag_vectordb:/data/vectordb
+    user: "root"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ollama
+    networks:
+      - rag_network
+    env_file: ".env"
+
+  loader:
+    build: ./loader
+    container_name: loader
+    volumes:
+      - ./loader:/app
+      - rag_vectordb:/data/vectordb
+    user: "root"
+    ports:
+      - "8002:8002"
+    depends_on:
+      - minio
+      - ollama
+    networks:
+      - rag_network
+    env_file: ".env"
+    environment:
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_EXTERNAL_ENDPOINT=localhost:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_BUCKET_NAME=rag-documents
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - rag_network
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin123
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+# Note: If you have already an ollama service running on your host machine, instead of using this ollama container, you can configure the services to connect to your existing Ollama instance by setting the OLLAMA_BASE_URL environment variable in the .env file. You need to download the nomic-embed-text model manually on your existing Ollama instance.
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11435:11434"  # Ollama API
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - rag_network
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        # Start Ollama in the background
+        /bin/ollama serve &
+        
+        # Wait for Ollama to be ready
+        echo "Waiting for Ollama to start..."
+        sleep 5
+        
+        # Pull the model if it doesn't exist
+        if ! ollama list | grep -q "nomic-embed-text"; then
+          echo "Pulling nomic-embed-text model..."
+          ollama pull nomic-embed-text
+          echo "Model downloaded successfully!"
+        else
+          echo "Model nomic-embed-text already exists"
+        fi
+        
+        # Keep the container running
+        wait
+    restart: unless-stopped
+    # Note: If you want to use GPU acceleration, uncomment the following lines and ensure your Docker setup supports NVIDIA GPUs.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ollama_data:
+    name: ollama_data
+  rag_vectordb:
+    name: rag_vectordb
+  minio_data:
+    name: minio_data
+
+networks:
+  rag_network:
+    driver: bridge
