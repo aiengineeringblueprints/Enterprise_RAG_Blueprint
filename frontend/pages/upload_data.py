@@ -185,18 +185,6 @@ if 'last_sync_upload' in st.session_state and st.session_state['last_sync_upload
         if 'versions_stored' in result:
             st.info(f"📦 {len(result['versions_stored'])} versions stored in MinIO")
         
-        # Show "To Chat" button outside spinner so it's always visible
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if st.button("🚀 To Chat", type="primary", use_container_width=True):
-                # Clear the result before switching
-                st.session_state['last_sync_upload'] = None
-                st.switch_page("pages/rag_chat.py")
-        with col2:
-            if st.button("🔄 New Upload", use_container_width=True):
-                st.session_state['last_sync_upload'] = None
-                st.rerun()
-    else:
         st.error("❌ Error uploading documents")
         if 'error_message' in result:
             st.error(f"Details: {result['error_message']}")
@@ -255,7 +243,7 @@ if 'active_jobs' in st.session_state and st.session_state['active_jobs']:
                         try:
                             started = datetime.fromisoformat(status['started_at'].replace('Z', '+00:00'))
                             st.caption(f"⏰ Started: {started.strftime('%H:%M:%S')}")
-                        except:
+                        except Exception:
                             st.caption("⏰ Running...")
                 
                 with col3:
@@ -269,8 +257,6 @@ if 'active_jobs' in st.session_state and st.session_state['active_jobs']:
                                 st.rerun()
                     elif status['status'] == 'completed':
                         st.success("✅ Done!")
-                        if st.button("🚀 To Chat", key=f"chat_{job_id}"):
-                            st.switch_page("pages/rag_chat.py")
                         active_jobs_to_remove.append(job_id)
                     elif status['status'] in ['failed', 'cancelled']:
                         st.error("❌ Error")
@@ -311,7 +297,7 @@ else:
                     try:
                         created = datetime.fromisoformat(job['created_at'].replace('Z', '+00:00'))
                         st.caption(f"Created: {created.strftime('%d.%m.%Y %H:%M')}")
-                    except:
+                    except Exception:
                         st.caption("Created: Unknown")
                 
                 with col2:
