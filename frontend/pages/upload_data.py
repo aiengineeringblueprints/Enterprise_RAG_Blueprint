@@ -26,7 +26,7 @@ st.write("""
 ## Load Documents into Vectorstore
 
 Here you can upload your documents and load them into the vectorstore. 
-This allows the optimAIse Chat to access your documents and answer questions.
+This allows the RAG Chat to access your documents and answer questions.
 """)
 
 # Check loader service health

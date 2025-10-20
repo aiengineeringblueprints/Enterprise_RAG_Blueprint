@@ -25,8 +25,8 @@ else:
     st.sidebar.write("---")
 
 
-st.markdown("# optimAIse Chat 💬")
-st.sidebar.markdown("# optimAIse Chat 💬")
+st.markdown("# RAG Chat 💬")
+st.sidebar.markdown("# RAG Chat 💬")
 
 # Create columns for chat and document display
 col1, col2 = st.columns([2, 1])  # Chat nimmt 2/3, Dokumente 1/3
@@ -301,6 +301,6 @@ with col1:
         st.rerun()
 
     elif not chat_id:
-        st.write("This is the optimAIse Chat.")
+        st.write("This is the RAG Chat.")
         st.write("Here you can chat with your documents.")
         st.write("Select a chat on the left or write a message to start a new chat!")

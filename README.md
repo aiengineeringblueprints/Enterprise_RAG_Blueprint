@@ -5,9 +5,9 @@ Presenting an AI engineering blueprint for on-premises enterprise RAG solutions.
 AI-Engineering Blueprint for Scalable On-Premises Retrieval-Augmented Generation Systems
 
 ## Quick Start
-To try the RAG Reference Application, clone the repository 
+To try the RAG Reference Application, fork and clone the repository 
 
-Rename the ```example.env``` to ```.env``` and add the base URL for your LLM. Note: The call to the LLM is executed using an OpenAI-compatible API (https://platform.openai.com/docs/api-reference/chat/create) which calls ```[baseurl]/chat/completions```.
+Rename the ```example.env``` to ```.env``` and add the Base URL, API Key and Model name for your LLM. Note: The call to the LLM is executed using an OpenAI-compatible API (https://platform.openai.com/docs/api-reference/chat/create) which calls ```[baseurl]/chat/completions```.
 
 then run 
 ```
