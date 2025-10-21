@@ -29,6 +29,16 @@ services:
     networks:
       - rag_network
     env_file: ".env"
+    environment:
+      - OTEL_SERVICE_NAME=chain
+      - OTEL_TRACES_EXPORTER=console
+      - OTEL_METRICS_EXPORTER=console
+      - OTEL_LOGS_EXPORTER=console
+      - OTEL_LOG_LEVEL=DEBUG
+      # Disable OpenAI instrumentation to avoid LegacyAPIResponse compatibility issues
+      - OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=openai-v2,openai
+      # if oltp exporter is used, uncomment the following line
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 
   loader:
     build: ./loader
@@ -51,6 +61,15 @@ services:
       - MINIO_ACCESS_KEY=minioadmin
       - MINIO_SECRET_KEY=minioadmin123
       - MINIO_BUCKET_NAME=rag-documents
+      - OTEL_SERVICE_NAME=loader
+      - OTEL_TRACES_EXPORTER=console
+      - OTEL_METRICS_EXPORTER=console
+      - OTEL_LOGS_EXPORTER=console
+      - OTEL_LOG_LEVEL=DEBUG
+      # Disable OpenAI instrumentation to avoid compatibility issues
+      - OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=openai-v2,openai
+      # if oltp exporter is used, uncomment the following line
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
 
   minio:
     image: minio/minio:latest

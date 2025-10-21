@@ -12,3 +12,7 @@ chromadb
 tqdm
 dotenv
 logging
+
+opentelemetry-distro
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp

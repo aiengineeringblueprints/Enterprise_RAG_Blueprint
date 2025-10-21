@@ -11,3 +11,7 @@ pypdf
 tqdm
 langchain_ollama
 minio
+
+opentelemetry-distro
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp

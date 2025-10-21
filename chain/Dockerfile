@@ -13,6 +13,8 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN python -m pip install -r requirements.txt
 
+RUN opentelemetry-bootstrap -a install
+
 WORKDIR /app
 COPY . /app
 
@@ -21,5 +23,8 @@ COPY . /app
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
 USER appuser
 
-# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
-CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "--reload", "chain_api:app"]
+# Start the FastAPI server with OpenTelemetry instrumentation in console
+CMD ["opentelemetry-instrument", "uvicorn", "--host", "0.0.0.0", "--port", "8000", "chain_api:app"]
+
+# Alternatively, run the FastAPI server with auto reload on save (but without OpenTelemetry instrumentation) 
+# CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "--reload", "chain_api:app"]
