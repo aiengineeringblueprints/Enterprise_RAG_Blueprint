@@ -522,7 +522,7 @@ async def get_full_document(document_source: str):
     Get the full content of a document by its source path
     """
     try:
-        from vector_store import get_full_document_content, debug_list_document_sources
+        from vector_store import get_full_document_content, list_document_sources
         
         print(f"Requested document: {document_source}")
         
@@ -536,7 +536,7 @@ async def get_full_document(document_source: str):
             }
         
         # If not found or empty, try to find similar document paths
-        available_sources = debug_list_document_sources()
+        available_sources = list_document_sources()
         print(f"Available sources: {available_sources}")
         
         # Extract just the filename from the requested path
@@ -600,8 +600,8 @@ async def list_document_sources():
     Debug endpoint to list all available document sources
     """
     try:
-        from vector_store import debug_list_document_sources
-        sources = debug_list_document_sources()
+        from vector_store import list_document_sources
+        sources = list_document_sources()
         return {
             "total_sources": len(sources),
             "sources": sources[:50],  # Limit to first 50 for readability
@@ -621,7 +621,7 @@ async def get_minio_status_endpoint():
     """Check MinIO connection and configuration status."""
     return get_minio_status()
 
-@app.get("/debug/minio/objects")
+@app.get("/minio/objects")
 async def list_minio_objects():
     """Debug endpoint to list all objects in MinIO bucket."""
     try:

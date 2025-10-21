@@ -48,7 +48,7 @@ def list_minio_documents_api():
     List all documents available in MinIO through the loader API.
     """
     try:
-        url = f"{LOADER_URL}debug/minio/objects"
+        url = f"{LOADER_URL}minio/objects"
         response = requests.get(url)
         
         if response.status_code == 200:

@@ -102,18 +102,18 @@ def get_full_document_content_local(document_source: str) -> Optional[str]:
         return None
 
 
-def debug_list_document_sources() -> list:
+def list_document_sources() -> list:
     """
     Debug function to list all unique document sources in the vectorstore.
     """
     try:
-        return debug_list_document_sources_local()
+        return list_document_sources_local()
     except Exception as e:
         print(f"Error listing document sources: {e}")
         return []
 
 
-def debug_list_document_sources_local() -> list:
+def list_document_sources_local() -> list:
     """List document sources from local Chroma vectorstore."""
     try:
         if Chroma is None:

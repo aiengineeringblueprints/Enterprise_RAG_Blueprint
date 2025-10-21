@@ -323,7 +323,7 @@ class TestMinIOIntegration:
         mock_versioning.bucket_name = "rag-documents"
         mock_minio_class.return_value = mock_versioning
         
-        response = client.get("/debug/minio/objects")
+        response = client.get("/minio/objects")
         
         assert response.status_code == 200
         data = response.json()

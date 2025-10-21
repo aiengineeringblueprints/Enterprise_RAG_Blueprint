@@ -8,8 +8,8 @@ from loader.vector_store import (
     upload_documents_to_vectorstore,
     get_full_document_content,
     get_full_document_content_local,
-    debug_list_document_sources,
-    debug_list_document_sources_local,
+    list_document_sources,
+    list_document_sources_local,
     debug_get_local_content_for_source,
 )
 
@@ -262,7 +262,7 @@ class TestDebugListDocumentSources:
 
         mock_local_func.return_value = ["doc1.pdf", "doc2.txt", "doc3.md"]
         
-        result = debug_list_document_sources()
+        result = list_document_sources()
         
         assert result == ["doc1.pdf", "doc2.txt", "doc3.md"]
         mock_local_func.assert_called_once()
@@ -272,7 +272,7 @@ class TestDebugListDocumentSources:
 
         mock_local_func.side_effect = Exception("Test error")
         
-        result = debug_list_document_sources()
+        result = list_document_sources()
         
         assert result == []
     
@@ -294,7 +294,7 @@ class TestDebugListDocumentSources:
         mock_vectorstore._collection = mock_collection
         mock_chroma_class.return_value = mock_vectorstore
         
-        result = debug_list_document_sources_local()
+        result = list_document_sources_local()
         
         assert len(result) == 3
         assert "doc1.pdf" in result
@@ -312,7 +312,7 @@ class TestDebugListDocumentSources:
         mock_vectorstore._collection = mock_collection
         mock_chroma_class.return_value = mock_vectorstore
         
-        result = debug_list_document_sources_local()
+        result = list_document_sources_local()
         
         assert result == []
     
@@ -333,7 +333,7 @@ class TestDebugListDocumentSources:
         mock_vectorstore._collection = mock_collection
         mock_chroma_class.return_value = mock_vectorstore
         
-        result = debug_list_document_sources_local()
+        result = list_document_sources_local()
         
         assert "doc1.pdf" in result
         assert "unknown" in result
@@ -341,7 +341,7 @@ class TestDebugListDocumentSources:
     @patch('loader.vector_store.Chroma', None)
     def test_debug_list_document_sources_local_chroma_not_installed(self):
 
-        result = debug_list_document_sources_local()
+        result = list_document_sources_local()
         
         assert result == []
 
@@ -551,7 +551,7 @@ class TestIntegration:
         mock_vectorstore._collection = mock_collection
         mock_chroma_class.return_value = mock_vectorstore
         
-        sources = debug_list_document_sources_local()
+        sources = list_document_sources_local()
         assert len(sources) == 2
         assert "doc1.pdf" in sources
         
