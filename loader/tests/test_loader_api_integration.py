@@ -389,7 +389,7 @@ class TestMinIOIntegration:
 
 class TestVectorStoreIntegration:
 
-    @patch('vector_store.debug_list_document_sources')
+    @patch('vector_store.list_document_sources')
     def test_list_document_sources(self, mock_list_sources):
         mock_list_sources.return_value = ["doc1.pdf", "doc2.txt", "doc3.md"]
         
@@ -566,7 +566,7 @@ class TestErrorHandling:
         data = response.json()
         assert data["connected"] is False
 
-    @patch('vector_store.debug_list_document_sources')
+    @patch('vector_store.list_document_sources')
     def test_vectorstore_error_handling(self, mock_list_sources):
         mock_list_sources.side_effect = Exception("Chroma error")
         

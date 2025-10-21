@@ -257,8 +257,8 @@ class TestGetFullDocumentContent:
 
 class TestDebugListDocumentSources:
 
-    @patch('loader.vector_store.debug_list_document_sources_local')
-    def test_debug_list_document_sources_success(self, mock_local_func):
+    @patch('loader.vector_store.list_document_sources_local')
+    def test_list_document_sources_success(self, mock_local_func):
 
         mock_local_func.return_value = ["doc1.pdf", "doc2.txt", "doc3.md"]
         
@@ -267,8 +267,8 @@ class TestDebugListDocumentSources:
         assert result == ["doc1.pdf", "doc2.txt", "doc3.md"]
         mock_local_func.assert_called_once()
     
-    @patch('loader.vector_store.debug_list_document_sources_local')
-    def test_debug_list_document_sources_error(self, mock_local_func):
+    @patch('loader.vector_store.list_document_sources_local')
+    def test_list_document_sources_error(self, mock_local_func):
 
         mock_local_func.side_effect = Exception("Test error")
         
@@ -278,7 +278,7 @@ class TestDebugListDocumentSources:
     
     @patch('loader.vector_store.Chroma')
     @patch('loader.vector_store.OllamaEmbeddings')
-    def test_debug_list_document_sources_local_success(self, mock_embeddings_class, mock_chroma_class):
+    def test_list_document_sources_local_success(self, mock_embeddings_class, mock_chroma_class):
 
         mock_collection = MagicMock()
         mock_collection.get.return_value = {
@@ -303,7 +303,7 @@ class TestDebugListDocumentSources:
     
     @patch('loader.vector_store.Chroma')
     @patch('loader.vector_store.OllamaEmbeddings')
-    def test_debug_list_document_sources_local_empty(self, mock_embeddings_class, mock_chroma_class):
+    def test_list_document_sources_local_empty(self, mock_embeddings_class, mock_chroma_class):
 
         mock_collection = MagicMock()
         mock_collection.get.return_value = {"metadatas": []}
@@ -318,7 +318,7 @@ class TestDebugListDocumentSources:
     
     @patch('loader.vector_store.Chroma')
     @patch('loader.vector_store.OllamaEmbeddings')
-    def test_debug_list_document_sources_local_with_unknown(self, mock_embeddings_class, mock_chroma_class):
+    def test_list_document_sources_local_with_unknown(self, mock_embeddings_class, mock_chroma_class):
 
         mock_collection = MagicMock()
         mock_collection.get.return_value = {
@@ -339,7 +339,7 @@ class TestDebugListDocumentSources:
         assert "unknown" in result
     
     @patch('loader.vector_store.Chroma', None)
-    def test_debug_list_document_sources_local_chroma_not_installed(self):
+    def test_list_document_sources_local_chroma_not_installed(self):
 
         result = list_document_sources_local()
         
