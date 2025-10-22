@@ -18,13 +18,16 @@ RUN opentelemetry-bootstrap -a install
 WORKDIR /app
 COPY . /app
 
+# Make entrypoint script executable (before switching to non-root user)
+RUN chmod +x /app/entrypoint.sh
+
 # Creates a non-root user with an explicit UID and adds permission to access the /app folder
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
 RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
+
 USER appuser
 
-# Start the FastAPI server with OpenTelemetry instrumentation in console
-CMD ["opentelemetry-instrument", "uvicorn", "--host", "0.0.0.0", "--port", "8000", "chain_api:app"]
-
-# Alternatively, run the FastAPI server with auto reload on save (but without OpenTelemetry instrumentation) 
-# CMD ["uvicorn", "--host", "0.0.0.0", "--port", "8000", "--reload", "chain_api:app"]
+# Entrypoint script checks DEV_MODE env variable:
+# - DEV_MODE=true: uvicorn with --reload (no OpenTelemetry)
+# - DEV_MODE=false or unset: opentelemetry-instrument uvicorn (production mode)
+ENTRYPOINT ["/app/entrypoint.sh"]
