@@ -86,13 +86,30 @@ def llm_api(
         "user_roles": user_roles,
         "chat_history": formatted_history,
     }
-    response = requests.post(url, json=payload)
-    if response.status_code == 200:
-        data = response.json()
-        return data["result"], data["relevant_documents"], data["prompt_key"]
-    else:
-        st.error(f"LLM API Error: {response.status_code} - {response.text}")
-        return f"API Error: {response.status_code}", [], prompt_key
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            data = response.json()
+            return data["result"], data["relevant_documents"], data["prompt_key"]
+        elif response.status_code == 400:
+            # Guardrail blocked the input - return user-friendly message without showing error banner
+            try:
+                error_detail = response.json().get(
+                    "detail",
+                    "Ihre Eingabe wurde durch die Sicherheitsrichtlinien blockiert.",
+                )
+            except:
+                error_detail = (
+                    "Ihre Eingabe wurde durch die Sicherheitsrichtlinien blockiert."
+                )
+            # Return the message directly without st.error()
+            return error_detail, [], prompt_key
+        else:
+            st.error(f"LLM API Error: {response.status_code} - {response.text}")
+            return f"API Error: {response.status_code}", [], prompt_key
+    except requests.exceptions.RequestException as e:
+        st.error(f"Verbindungsfehler: {str(e)}")
+        return "Es ist ein Verbindungsfehler aufgetreten.", [], prompt_key
 
 def check_answer_api(question, answer, relevant_documents, question_prompt_key, prompt_template="rag_check", used_model=""):
     url = CHAIN_URL + "check_answer"  # Adjust if your FastAPI runs elsewhere

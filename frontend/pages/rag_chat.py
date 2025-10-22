@@ -377,22 +377,33 @@ with col1:
             
             # Store relevant documents in session state for display
             st.session_state.current_relevant_docs = relevant_documents or []
-            
-            fact_checker_answer = api_calls.check_answer_api(
-                question,
-                answer=answer,
-                prompt_template="rag_check",
-                question_prompt_key="rag_source",
-                relevant_documents=relevant_documents
+
+            # Check if the answer is a guardrail block or API error - don't run checks on these
+            is_error_or_blocked = (
+                "Sicherheitsrichtlinien blockiert" in answer or 
+                "API Error" in answer or
+                "Verbindungsfehler" in answer
             )
-
-            keyword_check = api_calls.check_keywords_api(question, answer, expected_keywords=None, threshold=0.6)
-
-            # Prepare the response text
-            if "yes" in fact_checker_answer["evaluation"] and "yes" in keyword_check["evaluation"]:
-                response_text = answer + " DOUBLE CHECKED FROM CONTEXT"
+            
+            if is_error_or_blocked:
+                # Error or guardrail blocked - show message directly without checks
+                response_text = answer
             else:
-                response_text = answer + " CHECK: " + fact_checker_answer["evaluation"] + " KEYWORD: " + keyword_check["evaluation"]
+                fact_checker_answer = api_calls.check_answer_api(
+                    question,
+                    answer=answer,
+                    prompt_template="rag_check",
+                    question_prompt_key="rag_source",
+                    relevant_documents=relevant_documents
+                )
+
+                keyword_check = api_calls.check_keywords_api(question, answer, expected_keywords=None, threshold=0.6)
+
+                # Prepare the response text
+                if "yes" in fact_checker_answer["evaluation"] and "yes" in keyword_check["evaluation"]:
+                    response_text = answer + " DOUBLE CHECKED FROM CONTEXT"
+                else:
+                    response_text = answer + " CHECK: " + fact_checker_answer["evaluation"] + " KEYWORD: " + keyword_check["evaluation"]
 
             # Display the response
             st.markdown(response_text)

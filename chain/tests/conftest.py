@@ -17,6 +17,8 @@ os.environ.setdefault("MODEL_NAME", "test-model")
 os.environ.setdefault("RETRIEVER_SIMILARITY_THRESHOLD", "0.5")
 os.environ.setdefault("OPENAI_API_KEY", "test-key-123")
 os.environ.setdefault("OPENAI_BASE_URL", "http://localhost:11435/v1")
+# Disable guardrails in test environment (Ollama doesn't support /v1/chat/completions)
+os.environ.setdefault("DISABLE_GUARDRAILS", "true")
 
 
 @pytest.fixture
