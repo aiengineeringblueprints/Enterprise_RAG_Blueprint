@@ -12,6 +12,11 @@ LLM_SOURCE_ANSWER = os.getenv("LLM_SOURCE_ANSWER")
 LLM_SOURCE_CHECK = os.getenv("LLM_SOURCE_CHECK")
 
 app = FastAPI()
+
+class HealthResponse(BaseModel):
+    status: str
+    service: str
+
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=1)
     prompt_key: Union[PromptKey, str] = PromptKey.SOURCE
@@ -32,6 +37,11 @@ class KeywordCheckRequest(BaseModel):
     answer: str = Field(min_length=1)
     expected_keywords: list[str] = []
     threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint"""
+    return HealthResponse(status="healthy", service="chain")
 
 @app.post("/call_llm")
 async def call_llm_endpoint(request: QuestionRequest):

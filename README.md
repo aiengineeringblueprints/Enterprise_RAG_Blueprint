@@ -28,5 +28,11 @@ Once logged in you can try the App by uploading documents in the upload document
 
 Note: Since this is a development example, the reasoning of the model is shown in the output. This can be changed ...
 
+## Run services or tests locally
+To run the services or the pytests locally, the dependencies from ```loader/requirements.txt``` and ```chain/requirements``` (for running the frontend locally also ```frontend/requirements.txt```) need to be installed as well as the ```./requirements-test.txt```  
+
+## Deployment
+Deployment is configured using GitHub Actions and a CI/CD pipeline. You can find this pipeline and the documentation in ./github/workflows and in the repo at GitHub Actions.
+
 ## Open Topics
 - Automated naming of chats 
