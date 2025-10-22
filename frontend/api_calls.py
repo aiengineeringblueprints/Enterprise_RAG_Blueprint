@@ -60,14 +60,31 @@ def list_minio_documents_api():
         st.error(f"Error connecting to loader API: {str(e)}")
         return None  
 
-def llm_api(question, prompt_key="rag_source", show_sources=True, used_model="", user_roles=["General"]):
-    url = CHAIN_URL + "call_llm" 
+def llm_api(
+    question,
+    prompt_key="rag_source",
+    show_sources=True,
+    used_model="",
+    user_roles=["Allgemein"],
+    chat_history=None,
+):
+    url = CHAIN_URL + "call_llm"
+
+    # Convert chat_history to API format if provided
+    formatted_history = []
+    if chat_history:
+        for msg in chat_history:
+            formatted_history.append(
+                {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+            )
+
     payload = {
         "question": question,
         "prompt_key": prompt_key,
         "used_model": used_model,
         "show_sources": show_sources,
         "user_roles": user_roles,
+        "chat_history": formatted_history,
     }
     response = requests.post(url, json=payload)
     if response.status_code == 200:

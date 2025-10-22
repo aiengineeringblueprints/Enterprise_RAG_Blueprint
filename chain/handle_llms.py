@@ -48,20 +48,22 @@ def call_llm(
     used_model: str = LLM_SOURCE_ANSWER,
     show_sources: bool = True,
     user_roles: list = ["General"],
+    chat_history: list = None,
 ) -> str:
     """
     Calls a language model (LLM) to process a given question using a specified prompt template and model.
-    
+
     Args:
         question (str): The input question to be processed by the LLM.
         promt_key (PromptKey, optional): The name of the prompt template to use. Defaults to PromptKey.SUMMARY.
         used_model (str, optional): The identifier of the LLM model to use. Defaults to LLM_SOURCE_ANSWER.
         show_sources (bool, optional): Whether to include source information in the result. Defaults to True.
         user_roles (list, optional): List of roles/categories the user has for role-based filtering.
-        
+        chat_history (list, optional): List of previous messages [{role, content}] for conversational context.
+
     Returns:
         object: The result of the LLM processing, which may include the answer and optionally the sources.
-        
+
     Raises:
         ValueError: If any of the following components are not found or fail to load:
             - Retriever
@@ -85,6 +87,19 @@ def call_llm(
     model = load_llm_model(used_model)
     if model is None:
         raise ValueError("No LLM model found. Please check your configuration.")
+
+    # Limit chat history to last 10 messages to avoid token overflow
+    limited_chat_history = None
+    if chat_history and len(chat_history) > 0:
+        limited_chat_history = chat_history[-10:]
+
+    chain = load_chain(
+        retriever,
+        prompt_key,
+        model,
+        include_doc_names=True,
+        chat_history=limited_chat_history,
+    )
 
     chain = load_chain(retriever, prompt_key, model, include_doc_names=True)
     if chain is None:

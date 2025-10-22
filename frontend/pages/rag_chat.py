@@ -352,13 +352,28 @@ with col1:
 
         # Display assistant response in chat message container
         with st.chat_message("assistant"):
-           
-           # call LLM API 
+            
+            # Load chat history from database for context (exclude current user message)
+            chat_history = []
+            if chat_id:
+                all_messages = chat_manager.get_messages(chat_id)
+                # Exclude the last message (which is the current user message we just added)
+                # Keep only up to the last 20 messages for context (10 exchanges)
+                previous_messages = all_messages[:-1] if len(all_messages) > 0 else []
+                chat_history = (
+                    previous_messages[-20:]
+                    if len(previous_messages) > 20
+                    else previous_messages
+                )
+
+           # call LLM API
             answer, relevant_documents, promt_key = api_calls.llm_api(
-                question=question, 
-                prompt_key="rag_source", 
-                show_sources=True, 
-                user_roles=user_roles)
+                question=question,
+                prompt_key="rag_source",
+                show_sources=True,
+                user_roles=user_roles,
+                chat_history=chat_history,
+            )           
             
             # Store relevant documents in session state for display
             st.session_state.current_relevant_docs = relevant_documents or []
