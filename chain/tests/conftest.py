@@ -2,8 +2,21 @@
 Shared fixtures and mocks for chain service unit tests.
 """
 import pytest
+import os
 from unittest.mock import Mock, MagicMock, patch
 from langchain_core.documents import Document
+
+os.environ.setdefault("EMBEDDING_SOURCE", "ollama")
+os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434")
+os.environ.setdefault("INDEX_NAME", "test-index")
+os.environ.setdefault("VECTORDB_DIR", "/tmp/test_vectordb")
+os.environ.setdefault("RETRIEVER_DISABLE_FILTER", "false")
+os.environ.setdefault("LLM_SOURCE_ANSWER", "openai")
+os.environ.setdefault("LLM_SOURCE_CHECK", "openai")
+os.environ.setdefault("MODEL_NAME", "test-model")
+os.environ.setdefault("RETRIEVER_SIMILARITY_THRESHOLD", "0.5")
+os.environ.setdefault("OPENAI_API_KEY", "test-key-123")
+os.environ.setdefault("OPENAI_BASE_URL", "http://localhost:11435/v1")
 
 
 @pytest.fixture
@@ -94,22 +107,6 @@ def mock_prompt_manager():
     mock = Mock()
     mock.load_template.return_value = "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
     return mock
-
-
-@pytest.fixture(autouse=True)
-def mock_env_vars(monkeypatch):
-    """Set up mock environment variables for testing."""
-    monkeypatch.setenv("EMBEDDING_SOURCE", "ollama")
-    monkeypatch.setenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    monkeypatch.setenv("INDEX_NAME", "test-index")
-    monkeypatch.setenv("VECTORDB_DIR", "/tmp/test_vectordb")
-    monkeypatch.setenv("RETRIEVER_DISABLE_FILTER", "false")
-    monkeypatch.setenv("LLM_SOURCE_ANSWER", "openai")
-    monkeypatch.setenv("LLM_SOURCE_CHECK", "openai")
-    monkeypatch.setenv("MODEL_NAME", "test-model")
-    monkeypatch.setenv("RETRIEVER_SIMILARITY_THRESHOLD", "0.5")
-    monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
-    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11435/v1")
 
 
 @pytest.fixture

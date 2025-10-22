@@ -93,7 +93,7 @@ class TestCreateRetriever:
 
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_create_retriever_with_existing_vectorstore(self, mock_embeddings, mock_chroma, mock_env_vars):
+    def test_create_retriever_with_existing_vectorstore(self, mock_embeddings, mock_chroma):
 
         from retriever import create_retriever
         
@@ -111,7 +111,7 @@ class TestCreateRetriever:
         
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_create_retriever_admin_no_filter(self, mock_embeddings, mock_chroma, mock_env_vars):
+    def test_create_retriever_admin_no_filter(self, mock_embeddings, mock_chroma):
 
         from retriever import create_retriever
         
@@ -130,7 +130,7 @@ class TestCreateRetriever:
         
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_create_retriever_general_user_no_filter(self, mock_embeddings, mock_chroma, mock_env_vars):
+    def test_create_retriever_general_user_no_filter(self, mock_embeddings, mock_chroma):
 
         from retriever import create_retriever
         
@@ -149,7 +149,7 @@ class TestCreateRetriever:
         
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_create_retriever_specific_role_with_filter(self, mock_embeddings, mock_chroma, mock_env_vars):
+    def test_create_retriever_specific_role_with_filter(self, mock_embeddings, mock_chroma):
 
         from retriever import create_retriever
         
@@ -168,7 +168,7 @@ class TestCreateRetriever:
         if 'filter' in call_args[1]['search_kwargs']:
             assert call_args[1]['search_kwargs']['filter']['category_bitmask'] == expected_bitmask
         
-    def test_create_retriever_default_parameters(self, mock_env_vars):
+    def test_create_retriever_default_parameters(self):
 
         from retriever import create_retriever
         
@@ -190,7 +190,7 @@ class TestInitFilteredVectorstore:
     @patch('retriever.os.makedirs')
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_init_creates_directory(self, mock_embeddings, mock_chroma, mock_makedirs, mock_env_vars):
+    def test_init_creates_directory(self, mock_embeddings, mock_chroma, mock_makedirs):
 
         from retriever import init_filtered_vectorstore
         
@@ -228,7 +228,7 @@ class TestInitFilteredVectorstore:
     @patch('retriever.os.makedirs')
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
-    def test_reuse_existing_embeddings(self, mock_embeddings, mock_chroma, mock_makedirs, mock_env_vars):
+    def test_reuse_existing_embeddings(self, mock_embeddings, mock_chroma, mock_makedirs):
 
         from retriever import init_filtered_vectorstore
         

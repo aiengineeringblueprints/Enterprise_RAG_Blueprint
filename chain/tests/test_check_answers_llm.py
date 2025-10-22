@@ -231,8 +231,7 @@ class TestCheckAnswerWithSecondLLM:
         mock_chat_prompt,
         mock_load_llm,
         mock_load_chain,
-        mock_rag_chain,
-        mock_env_vars
+        mock_rag_chain
     ):
 
         from check_answers_llm import check_answer_with_second_llm
@@ -286,8 +285,7 @@ class TestCheckAnswerWithSecondLLM:
         mock_chat_prompt,
         mock_load_llm,
         mock_load_chain,
-        mock_rag_chain,
-        mock_env_vars
+        mock_rag_chain
     ):
 
         from check_answers_llm import check_answer_with_second_llm
@@ -332,8 +330,7 @@ class TestCheckAnswerWithSecondLLM:
         mock_chat_prompt,
         mock_load_llm,
         mock_load_chain,
-        mock_rag_chain,
-        mock_env_vars
+        mock_rag_chain
     ):
 
         from check_answers_llm import check_answer_with_second_llm

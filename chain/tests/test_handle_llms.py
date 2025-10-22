@@ -117,7 +117,7 @@ class TestCallLLM:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.load_llm_model')
     @patch('handle_llms.rag_chain')
-    def test_call_llm_basic(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_call_llm_basic(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         from prompts.promt_manager import PromptKey
@@ -155,7 +155,7 @@ class TestCallLLM:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.load_llm_model')
     @patch('handle_llms.rag_chain')
-    def test_call_llm_with_admin_role(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_call_llm_with_admin_role(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         from prompts.promt_manager import PromptKey
@@ -189,7 +189,7 @@ class TestCallLLM:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.load_llm_model')
     @patch('handle_llms.rag_chain')
-    def test_call_llm_with_multiple_roles(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_call_llm_with_multiple_roles(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         
@@ -220,7 +220,7 @@ class TestCallLLM:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.load_llm_model')
     @patch('handle_llms.rag_chain')
-    def test_call_llm_show_sources_false(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_call_llm_show_sources_false(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         
@@ -249,7 +249,7 @@ class TestCallLLM:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.load_llm_model')
     @patch('handle_llms.rag_chain')
-    def test_call_llm_custom_model(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_call_llm_custom_model(self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         
@@ -278,7 +278,7 @@ class TestCallLLM:
 
     @patch('handle_llms.load_chain')
     @patch('handle_llms.create_retriever')
-    def test_call_llm_retriever_exception(self, mock_create_retriever, mock_env_vars):
+    def test_call_llm_retriever_exception(self, mock_load_chain, mock_create_retriever):
 
         from handle_llms import call_llm
         
@@ -292,7 +292,7 @@ class TestCallLLM:
 class TestLoadLLMModel:
 
     @patch('handle_llms.ChatOpenAI')
-    def test_load_llm_model_openai(self, mock_chat_openai, mock_env_vars):
+    def test_load_llm_model_openai(self, mock_chat_openai):
 
         from handle_llms import load_llm_model
         
@@ -308,7 +308,7 @@ class TestLoadLLMModel:
         assert call_args[1]['temperature'] == 0
         
     @patch('handle_llms.ChatOpenAI')
-    def test_load_llm_model_with_temperature_fixed(self, mock_chat_openai, mock_env_vars):
+    def test_load_llm_model_with_temperature_fixed(self, mock_chat_openai):
 
         from handle_llms import load_llm_model
         
@@ -320,7 +320,7 @@ class TestLoadLLMModel:
         call_args = mock_chat_openai.call_args
         assert call_args[1]['temperature'] == 0
         
-    def test_load_llm_model_invalid_source(self, mock_env_vars):
+    def test_load_llm_model_invalid_source(self):
 
         from handle_llms import load_llm_model
         
@@ -333,7 +333,7 @@ class TestIntegration:
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.ChatOpenAI')
     @patch('handle_llms.rag_chain')
-    def test_full_llm_pipeline(self, mock_rag_chain, mock_chat_openai, mock_create_retriever, mock_load_chain_func, mock_env_vars):
+    def test_full_llm_pipeline(self, mock_rag_chain, mock_chat_openai, mock_create_retriever, mock_load_chain_func):
 
         from handle_llms import call_llm
         from prompts.promt_manager import PromptKey
