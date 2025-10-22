@@ -246,6 +246,129 @@ class TestCallLLMEndpoint:
         
         assert response.status_code == 422
 
+    @patch('chain_api.call_llm')
+    def test_call_llm_endpoint_with_chat_history(self, mock_call_llm):
+        """Test /call_llm endpoint with chat history."""
+        
+        mock_call_llm.return_value = (
+            "Based on our previous conversation, Python is a high-level programming language.",
+            [],
+            PromptKey.SOURCE
+        )
+        
+        response = client.post(
+            "/call_llm",
+            json={
+                "question": "Can you elaborate on that?",
+                "chat_history": [
+                    {"role": "user", "content": "What is Python?"},
+                    {"role": "assistant", "content": "Python is a programming language."}
+                ]
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "Python" in data["result"]
+        
+        # Verify call_llm was called with chat_history
+        call_args = mock_call_llm.call_args
+        assert 'chat_history' in call_args[1]
+        assert len(call_args[1]['chat_history']) == 2
+        assert call_args[1]['chat_history'][0]['role'] == 'user'
+        assert call_args[1]['chat_history'][1]['role'] == 'assistant'
+
+    @patch('chain_api.call_llm')
+    def test_call_llm_endpoint_with_empty_chat_history(self, mock_call_llm):
+        """Test /call_llm endpoint with empty chat history list."""
+        
+        mock_call_llm.return_value = (
+            "Python is a programming language.",
+            [],
+            PromptKey.SOURCE
+        )
+        
+        response = client.post(
+            "/call_llm",
+            json={
+                "question": "What is Python?",
+                "chat_history": []
+            }
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify call_llm was called with empty chat_history
+        call_args = mock_call_llm.call_args
+        assert 'chat_history' in call_args[1]
+        assert call_args[1]['chat_history'] == []
+
+    @patch('chain_api.call_llm')
+    def test_call_llm_endpoint_with_multiple_history_messages(self, mock_call_llm):
+        """Test /call_llm endpoint with longer chat history."""
+        
+        mock_call_llm.return_value = (
+            "Python supports both procedural and object-oriented programming.",
+            [],
+            PromptKey.SOURCE
+        )
+        
+        chat_history = [
+            {"role": "user", "content": "What is Python?"},
+            {"role": "assistant", "content": "Python is a programming language."},
+            {"role": "user", "content": "What are its features?"},
+            {"role": "assistant", "content": "Python is interpreted, dynamically typed, and has simple syntax."},
+            {"role": "user", "content": "What programming paradigms does it support?"}
+        ]
+        
+        response = client.post(
+            "/call_llm",
+            json={
+                "question": "Tell me more about that.",
+                "chat_history": chat_history
+            }
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify all history messages were passed
+        call_args = mock_call_llm.call_args
+        assert len(call_args[1]['chat_history']) == 5
+
+    @patch('chain_api.call_llm')
+    def test_call_llm_endpoint_chat_history_with_custom_params(self, mock_call_llm):
+        """Test /call_llm endpoint with chat history and other custom parameters."""
+        
+        mock_call_llm.return_value = (
+            "Detailed answer with sources",
+            [{"source": "doc1.pdf", "content": "relevant content"}],
+            PromptKey.SOURCE
+        )
+        
+        response = client.post(
+            "/call_llm",
+            json={
+                "question": "Follow-up question",
+                "prompt_key": "rag_source",
+                "show_sources": True,
+                "user_roles": ["IT & Technology"],
+                "chat_history": [
+                    {"role": "user", "content": "Initial question"},
+                    {"role": "assistant", "content": "Initial answer"}
+                ]
+            }
+        )
+        
+        assert response.status_code == 200
+        
+        # Verify all parameters were passed correctly
+        call_args = mock_call_llm.call_args
+        assert call_args[1]['prompt_key'] == PromptKey.SOURCE
+        assert call_args[1]['show_sources'] is True
+        assert "IT & Technology" in call_args[1]['user_roles']
+        assert len(call_args[1]['chat_history']) == 2
+
+
 class TestCheckAnswerEndpoint:
 
     @patch('chain_api.check_answer_with_second_llm')

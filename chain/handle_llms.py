@@ -100,8 +100,6 @@ def call_llm(
         include_doc_names=True,
         chat_history=limited_chat_history,
     )
-
-    chain = load_chain(retriever, prompt_key, model, include_doc_names=True)
     if chain is None:
         raise ValueError("No chain found. Please check your configuration.")
 

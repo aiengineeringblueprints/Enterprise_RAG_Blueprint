@@ -149,7 +149,13 @@ class TestCallLLM:
         assert len(relevant_docs) > 0
         mock_create_retriever.assert_called_once()
         mock_load_llm.assert_called_once()
-        mock_load_chain_func.assert_called_once()
+        mock_load_chain_func.assert_called_once_with(
+            mock_retriever,
+            PromptKey.SOURCE,
+            mock_llm,
+            include_doc_names=True,
+            chat_history=None
+        )
     
     @patch('handle_llms.load_chain')
     @patch('handle_llms.create_retriever')
@@ -371,5 +377,10 @@ class TestIntegration:
         
         mock_create_retriever.assert_called_once()
         mock_chat_openai.assert_called_once()
-        mock_load_chain_func.assert_called_once()
+        
+        # Verify load_chain was called with chat_history parameter
+        call_args = mock_load_chain_func.call_args
+        assert call_args[1]['chat_history'] is None
+        assert call_args[1]['include_doc_names'] is True
+        
         mock_rag_chain.assert_called_once()

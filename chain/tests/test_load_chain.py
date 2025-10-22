@@ -374,3 +374,150 @@ class TestIntegration:
         chain = load_chain(mock_retriever, PromptKey.SOURCE, mock_model, include_doc_names=True)
         
         assert chain is not None
+
+
+class TestLoadChainWithChatHistory:
+    """Test load_chain functionality with chat history."""
+
+    @patch('load_chain.format_docs')
+    @patch('load_chain.ChatPromptTemplate')
+    @patch('load_chain.PromptManager')
+    def test_load_chain_with_chat_history(self, mock_prompt_mgr, mock_chat_prompt, mock_format_docs):
+        """Test that load_chain correctly handles chat history."""
+        from prompts.promt_manager import PromptKey
+        
+        mock_prompt_instance = Mock()
+        mock_prompt_instance.load_template.return_value = "Context: {context}\nQuestion: {question}"
+        mock_prompt_mgr.return_value = mock_prompt_instance
+        
+        mock_template = MockChainComponent()
+        mock_chat_prompt.from_messages.return_value = mock_template
+        
+        mock_model = MockChainComponent()
+        mock_format_docs.return_value = "Formatted documents"
+        
+        chat_history = [
+            {"role": "user", "content": "What is Python?"},
+            {"role": "assistant", "content": "Python is a programming language."}
+        ]
+        
+        chain = load_chain("Test context", PromptKey.SOURCE, mock_model, include_doc_names=True, chat_history=chat_history)
+        
+        assert chain is not None
+        mock_chat_prompt.from_messages.assert_called_once()
+        
+        # Verify that from_messages was called (indicates chat history mode)
+        call_args = mock_chat_prompt.from_messages.call_args[0][0]
+        assert len(call_args) == 3  # system, chat_history placeholder, human
+        assert call_args[0][0] == "system"
+        assert call_args[2][0] == "human"
+
+    @patch('load_chain.format_docs')
+    @patch('load_chain.ChatPromptTemplate')
+    @patch('load_chain.PromptManager')
+    def test_load_chain_with_empty_chat_history(self, mock_prompt_mgr, mock_chat_prompt, mock_format_docs):
+        """Test that empty chat history is treated as no chat history."""
+        from prompts.promt_manager import PromptKey
+        
+        mock_prompt_instance = Mock()
+        mock_prompt_instance.load_template.return_value = "Context: {context}\nQuestion: {question}"
+        mock_prompt_mgr.return_value = mock_prompt_instance
+        
+        mock_template = MockChainComponent()
+        mock_chat_prompt.from_template.return_value = mock_template
+        
+        mock_model = MockChainComponent()
+        mock_format_docs.return_value = "Formatted documents"
+        
+        chain = load_chain("Test context", PromptKey.SOURCE, mock_model, include_doc_names=True, chat_history=[])
+        
+        assert chain is not None
+        # Empty chat history should use from_template, not from_messages
+        mock_chat_prompt.from_template.assert_called_once()
+        mock_chat_prompt.from_messages.assert_not_called()
+
+    @patch('load_chain.format_docs')
+    @patch('load_chain.ChatPromptTemplate')
+    @patch('load_chain.PromptManager')
+    def test_load_chain_with_none_chat_history(self, mock_prompt_mgr, mock_chat_prompt, mock_format_docs):
+        """Test that None chat history uses traditional template."""
+        from prompts.promt_manager import PromptKey
+        
+        mock_prompt_instance = Mock()
+        mock_prompt_instance.load_template.return_value = "Context: {context}\nQuestion: {question}"
+        mock_prompt_mgr.return_value = mock_prompt_instance
+        
+        mock_template = MockChainComponent()
+        mock_chat_prompt.from_template.return_value = mock_template
+        
+        mock_model = MockChainComponent()
+        mock_format_docs.return_value = "Formatted documents"
+        
+        chain = load_chain("Test context", PromptKey.SOURCE, mock_model, include_doc_names=True, chat_history=None)
+        
+        assert chain is not None
+        mock_chat_prompt.from_template.assert_called_once()
+        mock_chat_prompt.from_messages.assert_not_called()
+
+    @patch('load_chain.format_docs')
+    @patch('load_chain.ChatPromptTemplate')
+    @patch('load_chain.PromptManager')
+    def test_load_chain_converts_chat_history_to_langchain_messages(self, mock_prompt_mgr, mock_chat_prompt, mock_format_docs):
+        """Test that chat history is converted to LangChain message format."""
+        from prompts.promt_manager import PromptKey
+        
+        mock_prompt_instance = Mock()
+        mock_prompt_instance.load_template.return_value = "Context: {context}\nQuestion: {question}"
+        mock_prompt_mgr.return_value = mock_prompt_instance
+        
+        mock_template = MockChainComponent()
+        mock_chat_prompt.from_messages.return_value = mock_template
+        
+        mock_model = MockChainComponent()
+        mock_format_docs.return_value = "Formatted documents"
+        
+        chat_history = [
+            {"role": "user", "content": "First question"},
+            {"role": "assistant", "content": "First answer"},
+            {"role": "user", "content": "Second question"}
+        ]
+        
+        chain = load_chain("Test context", PromptKey.SOURCE, mock_model, include_doc_names=True, chat_history=chat_history)
+        
+        assert chain is not None
+        # Verify the chain was built with chat history
+        mock_chat_prompt.from_messages.assert_called_once()
+
+    @patch('load_chain.format_docs')
+    @patch('load_chain.ChatPromptTemplate')
+    @patch('load_chain.PromptManager')
+    def test_load_chain_with_retriever_and_chat_history(self, mock_prompt_mgr, mock_chat_prompt, mock_format_docs):
+        """Test load_chain with retriever and chat history."""
+        from prompts.promt_manager import PromptKey
+        
+        mock_prompt_instance = Mock()
+        mock_prompt_instance.load_template.return_value = "Context: {context}\nQuestion: {question}"
+        mock_prompt_mgr.return_value = mock_prompt_instance
+        
+        mock_template = MockChainComponent()
+        mock_chat_prompt.from_messages.return_value = mock_template
+        
+        mock_model = MockChainComponent()
+        mock_format_docs.return_value = "Formatted documents"
+        
+        mock_retriever = Mock()
+        mock_docs = [Document(page_content="Test content", metadata={"source": "test.pdf"})]
+        mock_retriever.invoke = Mock(return_value=mock_docs)
+        
+        import langchain_core.vectorstores.base
+        mock_retriever.__class__ = langchain_core.vectorstores.base.VectorStoreRetriever
+        
+        chat_history = [
+            {"role": "user", "content": "Previous question"},
+            {"role": "assistant", "content": "Previous answer"}
+        ]
+        
+        chain = load_chain(mock_retriever, PromptKey.SOURCE, mock_model, include_doc_names=True, chat_history=chat_history)
+        
+        assert chain is not None
+        mock_chat_prompt.from_messages.assert_called_once()
