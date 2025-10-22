@@ -96,7 +96,7 @@ def mock_prompt_manager():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_env_vars(monkeypatch):
     """Set up mock environment variables for testing."""
     monkeypatch.setenv("EMBEDDING_SOURCE", "ollama")
@@ -108,6 +108,8 @@ def mock_env_vars(monkeypatch):
     monkeypatch.setenv("LLM_SOURCE_CHECK", "openai")
     monkeypatch.setenv("MODEL_NAME", "test-model")
     monkeypatch.setenv("RETRIEVER_SIMILARITY_THRESHOLD", "0.5")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key-123")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://localhost:11435/v1")
 
 
 @pytest.fixture
