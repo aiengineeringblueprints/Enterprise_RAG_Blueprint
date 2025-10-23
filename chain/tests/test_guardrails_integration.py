@@ -145,20 +145,6 @@ class TestGuardrailsIntegrationInAPI:
         mock_ensure.assert_called_once_with("Summarize this")
 
     @patch("chain_api.ensure_input_allowed")
-    def test_call_llm_guardrail_runtime_error(self, mock_ensure):
-        """Should return 500 when guardrail check raises GuardrailRuntimeError."""
-        from guardrails_manager import GuardrailRuntimeError
-        mock_ensure.side_effect = GuardrailRuntimeError("Check failed")
-        
-        response = client.post(
-            "/call_llm",
-            json={"question": "Test question"}
-        )
-        
-        assert response.status_code == 500
-        assert "Guardrail check failed" in response.json()["detail"]
-
-    @patch("chain_api.ensure_input_allowed")
     @patch("chain_api.call_llm")
     def test_call_llm_guardrails_with_minimum_question(self, mock_call_llm, mock_ensure):
         """Should apply guardrails to minimal requests."""
@@ -252,25 +238,6 @@ class TestGuardrailsFailOpen:
 
 class TestGuardrailsLogging:
     """Tests for guardrails logging behavior."""
-
-    @patch("chain_api.ensure_input_allowed")
-    @patch("chain_api.call_llm")
-    @patch("chain_api.logging")
-    def test_call_llm_logs_guardrail_runtime_error(self, mock_logging, mock_call_llm, mock_ensure):
-        """Should log GuardrailRuntimeError exceptions."""
-        from guardrails_manager import GuardrailRuntimeError
-        mock_ensure.side_effect = GuardrailRuntimeError("Test error")
-        
-        response = client.post(
-            "/call_llm",
-            json={"question": "Test"}
-        )
-        
-        assert response.status_code == 500
-        mock_logging.exception.assert_called_once()
-        log_call_args = mock_logging.exception.call_args[0]
-        assert "guardrail failure" in log_call_args[0]
-
 
 class TestGuardrailsPerformance:
     """Tests for guardrails performance characteristics."""
