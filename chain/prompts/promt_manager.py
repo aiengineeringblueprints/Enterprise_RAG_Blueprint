@@ -9,6 +9,7 @@ class PromptKey(str, Enum):
     CHECK  = "rag_check"                    # checks the original question and answer to it, output "yes" or "no"
     CHECK_EXTENDED = "rag_check_extended"   # checks the original question and answer to it, output explanation
     WEEKLY_REPORT = "rag_weekly_report"     # first try for a weekly report, TODO: test on real data
+    INPUT_GUARDRAILS = "rag_input_guardrails"  # checks user input for content moderation
     TEST_PROMT_TEMPLATE = "test_prompt_template"  # test prompt template - template for all other promts?
     TEST_PROMT_TEMPLATE_QA = "test_prompt_template_QA"  # test prompt template for q and a
 

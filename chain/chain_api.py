@@ -7,7 +7,7 @@ from typing import Union, List
 from prompts.promt_manager import PromptKey
 from check_answers_llm import check_answer_with_second_llm, check_answer_with_keywords
 from handle_llms import call_llm
-from guardrails_manager import ensure_input_allowed, GuardrailRuntimeError
+from guardrails_manager import ensure_input_allowed
 
 
 LLM_SOURCE_ANSWER = os.getenv("LLM_SOURCE_ANSWER")
@@ -93,9 +93,6 @@ async def call_llm_endpoint(request: QuestionRequest):
         }
     except HTTPException:
         raise
-    except GuardrailRuntimeError as e:
-        logging.exception("/call_llm guardrail failure: %s", e)
-        raise HTTPException(status_code=500, detail="Guardrail check failed.")
     except Exception as e:
         logging.exception("/call_llm failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
