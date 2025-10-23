@@ -20,7 +20,7 @@ The first start will take some time due to the building of the containers and pu
 
 The Frontend is accessable via 
 ```
-http://0.0.0.0:8501
+http://0.0.0.0:8501/
 ```
 
 At the first login, an admin user needs to be created. You can then create more users or just login with the admin user and password.
@@ -33,6 +33,9 @@ To run the services or the pytests locally, the dependencies from ```loader/requ
 
 ## Deployment
 Deployment is configured using GitHub Actions and a CI/CD pipeline. You can find this pipeline and the documentation in ./github/workflows and in the repo at GitHub Actions.
+
+## Architecture
+The architecture design can be found in the associated paper of this repository. The diagrams can be found in the folder architecture.
 
 ## Open Topics
 - Automated naming of chats 
