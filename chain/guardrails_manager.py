@@ -9,7 +9,7 @@ from handle_llms import load_llm_model
 
 
 _GUARDRAIL_LOCK = asyncio.Lock()
-_BLOCKED_MESSAGE = "Ihre Eingabe wurde durch die Sicherheitsrichtlinien blockiert. Bitte formulieren Sie Ihre Anfrage anders."
+_BLOCKED_MESSAGE = "Your input has been blocked by the security guidelines. Please rephrase your request."
 
 
 
@@ -31,11 +31,10 @@ async def _check_input_with_llm(user_input: str) -> Tuple[bool, Optional[str]]:
         elif "no" in answer:
             return (True, None)
         else:
-            # If response is unclear, fail-open (allow input) for better UX
             return (True, None)
             
     except Exception as e:
-        # On error, allow the input to pass through (fail-open)
+        # On error, allow the input to pass through
         return (True, None)
 
 

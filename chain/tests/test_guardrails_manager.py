@@ -46,7 +46,10 @@ class TestCheckInputWithLLM:
                 
                 assert allowed is False
                 assert message is not None
-                assert "Sicherheitsrichtlinien" in message
+                assert (
+                    "security guidelines"
+                    in message
+                )
 
     @pytest.mark.asyncio
     async def test_check_input_llm_exception(self):
@@ -162,7 +165,7 @@ class TestEnsureInputAllowed:
                 
                 assert allowed is False
                 assert message is not None
-                assert "blockiert" in message.lower()
+                assert "blocked" in message.lower()
 
     @pytest.mark.asyncio
     async def test_ensure_input_allowed_uses_lock(self):
