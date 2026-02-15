@@ -1,20 +1,29 @@
 ﻿"""Helper utilities for validating user inputs with simple LLM-based guardrails."""
-from __future__ import annotations
-
-import asyncio
 import os
 from typing import Optional, Tuple
 from prompts.promt_manager import PromptKey, PromptManager
-from handle_llms import load_llm_model
 
 
-_GUARDRAIL_LOCK = asyncio.Lock()
 _BLOCKED_MESSAGE = "Your input has been blocked by the security guidelines. Please rephrase your request."
 
 
-
-async def _check_input_with_llm(user_input: str) -> Tuple[bool, Optional[str]]:
-    """Check user input using LLM with prompt template from PromptManager."""
+def ensure_input_allowed(user_input: str) -> Tuple[bool, Optional[str]]:
+    """
+    Validate user input via guardrails.
+    
+    Args:
+        user_input: The user's input string to validate
+        
+    Returns:
+        Tuple of (allowed, error_message). If allowed is False, error_message contains the reason.
+    """
+    # Check if guardrails are disabled via environment variable
+    if os.getenv("DISABLE_GUARDRAILS", "").strip().lower() in {"1", "true", "yes"}:
+        return (True, None)
+    
+    # Lazy import to avoid circular dependency
+    from handle_llms import load_llm_model
+    
     llm_source = os.getenv("LLM_SOURCE_ANSWER", "openai")
     llm = load_llm_model(llm_source)
     
@@ -23,26 +32,13 @@ async def _check_input_with_llm(user_input: str) -> Tuple[bool, Optional[str]]:
     prompt = prompt_manager.render(PromptKey.INPUT_GUARDRAILS, user_input=user_input)
 
     try:
-        response = await llm.ainvoke(prompt)
+        response = llm.invoke(prompt)
         answer = response.content.strip().lower()
         
         if "yes" in answer:
             return (False, _BLOCKED_MESSAGE)
-        elif "no" in answer:
-            return (True, None)
-        else:
-            return (True, None)
+        return (True, None)
             
-    except Exception as e:
-        # On error, allow the input to pass through
+    except Exception:
+        # On error, allow the input to pass through (fail-open)
         return (True, None)
-
-
-async def ensure_input_allowed(user_input: str) -> Tuple[bool, Optional[str]]:
-    """Validate user input via guardrails. Returns (allowed, error_message)."""
-    # Check if guardrails are disabled via environment variable
-    if os.getenv("DISABLE_GUARDRAILS", "").strip().lower() in {"1", "true", "yes"}:
-        return (True, None)
-    
-    async with _GUARDRAIL_LOCK:
-        return await _check_input_with_llm(user_input)
