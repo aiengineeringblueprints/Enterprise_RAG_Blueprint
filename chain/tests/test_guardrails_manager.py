@@ -50,7 +50,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("What is machine learning?")
                 
                 assert allowed is True
@@ -64,7 +64,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Harmful content")
                 
                 assert allowed is False
@@ -81,13 +81,13 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Test")
                 assert allowed is False
                 
             # Test "No" in mixed case
             mock_response.content = "No"
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Test")
                 assert allowed is True
 
@@ -99,7 +99,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Test")
                 assert allowed is False
 
@@ -111,7 +111,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("")
                 
                 assert allowed is True
@@ -124,7 +124,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("What is 2+2? @#$%")
                 
                 assert allowed is True
@@ -138,7 +138,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(return_value=mock_response)
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Was ist Künstliche Intelligenz? 🤖")
                 
                 assert allowed is True
@@ -150,7 +150,7 @@ class TestEnsureInputAllowed:
         mock_llm.invoke = Mock(side_effect=Exception("API error"))
         
         with patch.dict(os.environ, {"DISABLE_GUARDRAILS": "false", "LLM_SOURCE_ANSWER": "openai"}):
-            with patch("guardrails_manager.load_llm_model", return_value=mock_llm):
+            with patch("handle_llms.load_llm_model", return_value=mock_llm):
                 allowed, message = ensure_input_allowed("Test question")
                 
                 assert allowed is True  # Fail-open
