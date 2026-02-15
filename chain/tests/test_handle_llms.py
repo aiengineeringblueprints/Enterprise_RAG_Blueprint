@@ -336,6 +336,7 @@ class TestLoadLLMModel:
 
 class TestIntegration:
 
+    @patch.dict(os.environ, {"DISABLE_QUERY_REFINEMENT": "true"})
     @patch('handle_llms.load_chain')
     @patch('handle_llms.create_retriever')
     @patch('handle_llms.ChatOpenAI')
