@@ -55,7 +55,7 @@ async def health_check():
 @app.post("/call_llm")
 async def call_llm_endpoint(request: QuestionRequest):
     try:
-        allowed, reason = await ensure_input_allowed(request.question)
+        allowed, reason = ensure_input_allowed(request.question)
         if not allowed:
             raise HTTPException(status_code=400, detail=reason or "Input blocked by guardrails.")
 

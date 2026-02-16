@@ -3,6 +3,7 @@ from prompts.promt_manager import PromptKey
 from langchain_openai import ChatOpenAI
 from load_chain import load_chain, rag_chain
 from retriever import create_retriever
+from query_refinement import refine_query
 
 
 LLM_SOURCE_ANSWER = os.getenv("LLM_SOURCE_ANSWER")
@@ -76,6 +77,10 @@ def call_llm(
     # Normalize inputs and load the retriever with role-based filtering
     roles = _normalize_roles(user_roles)
     threshold = _parse_float(RETRIEVER_SIMILARITY_THRESHOLD, default=0.5, min_v=0.0, max_v=1.0)
+    
+    # Refine the query for better retrieval results
+    refined_question = refine_query(question)
+    
     retriever = create_retriever(
         returned_docs=5,
         similarity_threshold=threshold,
@@ -104,7 +109,7 @@ def call_llm(
         raise ValueError("No chain found. Please check your configuration.")
 
     result, relevant_documents = rag_chain(
-        question, 
+        refined_question, 
         chain, 
         retriever, 
         show_sources=True
