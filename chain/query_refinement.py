@@ -1,4 +1,3 @@
-"""Helper utilities for refining user queries before retrieval."""
 import os
 from prompts.promt_manager import PromptKey, PromptManager
 
