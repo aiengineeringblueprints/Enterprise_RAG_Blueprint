@@ -1,8 +1,8 @@
 # Enterprise RAG Blueprint
 Presenting an AI engineering blueprint for on-premises enterprise RAG solutions. The blueprint includes an end-to-end reference architecture based on the 4+1 architectural view model, a reference application, and best practices for tooling, development, and deployment pipelines.
 
-## Associated paper:
-AI-Engineering Blueprint for Scalable On-Premises Retrieval-Augmented Generation Systems
+## Associated paper
+[AI Engineering Blueprint for On-Premises Retrieval-Augmented Generation Systems](publication/AI%20Engineering%20Blueprint%20for%20On-Premises%20Retrieval-Augmented%20Generation%20Systems%20-%20Weeger.pdf) — accepted at the ICSA 2026 Poster Track
 
 ## Quick Start
 To try the RAG Reference Application, fork and clone the repository 
