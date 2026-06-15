@@ -1,36 +1,49 @@
 import os
-from typing import Optional, List
+from typing import List, Optional
 
+from dotenv import load_dotenv
+from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
-from langchain_chroma import Chroma
-from dotenv import load_dotenv
 
 load_dotenv()
-VECTORSTORE = "local"
-EMBEDDING_SOURCE = os.environ.get("EMBEDDING_SOURCE")  # "ollama" or "openai"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
 INDEX_NAME = os.environ.get("INDEX_NAME", "langchain-test-index")
+
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
+
 # Shared directory for local vector store persistence (mounted into loader + chain)
 VECTORDB_DIR = os.environ.get("VECTORDB_DIR", "/data/vectordb")
 
 
-def upload_documents_to_vectorstore(all_splits: List[Document], index_name: Optional[str] = None) -> None:
+def upload_documents_to_vectorstore(
+    all_splits: List[Document], index_name: Optional[str] = None
+) -> None:
     """Add document chunks to the configured vector store (local Chroma by default)."""
     if index_name is None:
         index_name = INDEX_NAME
 
     documents: List[Document] = []
     for i in range(len(all_splits)):
-        metadata = all_splits[i].metadata.copy() if all_splits[i].metadata else {"source": "unknown"}
-        split = Document(page_content=all_splits[i].page_content, metadata=metadata)
+        metadata = (
+            all_splits[i].metadata.copy()
+            if all_splits[i].metadata
+            else {"source": "unknown"}
+        )
+        split = Document(
+            page_content=all_splits[i].page_content, metadata=metadata
+        )
         documents.append(split)
 
     # Ensure persistence directory exists (shared volume across containers)
     os.makedirs(VECTORDB_DIR, exist_ok=True)
 
-    print(f"Uploading {len(documents)} documents to local Chroma at {VECTORDB_DIR}, collection={index_name}")
-    embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+    print(
+        f"Uploading {len(documents)} documents to local Chroma at {VECTORDB_DIR}, collection={index_name}"
+    )
+    embeddings = OllamaEmbeddings(
+        base_url=OLLAMA_BASE_URL, model=EMBEDDING_MODEL
+    )
     vectorstore = Chroma(
         collection_name=index_name,
         embedding_function=embeddings,
@@ -53,7 +66,9 @@ def upload_documents_to_vectorstore(all_splits: List[Document], index_name: Opti
             client.persist()  # type: ignore[attr-defined]
         except Exception:
             pass
-    print(f"Successfully uploaded {len(documents)} documents to local Chroma store.")
+    print(
+        f"Successfully uploaded {len(documents)} documents to local Chroma store."
+    )
 
 
 def get_full_document_content(document_source: str) -> Optional[str]:
@@ -73,7 +88,9 @@ def get_full_document_content_local(document_source: str) -> Optional[str]:
     try:
         if Chroma is None:
             raise RuntimeError("Chroma not installed")
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL, model="EMBEDDING_MODEL"
+        )
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,
@@ -82,7 +99,9 @@ def get_full_document_content_local(document_source: str) -> Optional[str]:
 
         # Use underlying Chroma collection to fetch all entries with matching source
         where_filter = {"source": {"$eq": document_source}}
-        data = vectorstore._collection.get(where=where_filter, include=["documents", "metadatas"])  # type: ignore
+        data = vectorstore._collection.get(
+            where=where_filter, include=["documents", "metadatas"]
+        )  # type: ignore
         docs = data.get("documents", []) or []
         metas = data.get("metadatas", []) or []
         if not docs:
@@ -93,7 +112,9 @@ def get_full_document_content_local(document_source: str) -> Optional[str]:
         for content, meta in zip(docs, metas):
             page = (meta or {}).get("page", 0)
             chunk_idx = (meta or {}).get("chunk_index", 0)
-            chunks.append({"content": content, "page": page, "chunk_index": chunk_idx})
+            chunks.append(
+                {"content": content, "page": page, "chunk_index": chunk_idx}
+            )
 
         chunks.sort(key=lambda x: (x["page"], x["chunk_index"]))
         return "\n".join([c["content"] for c in chunks if c.get("content")])
@@ -118,7 +139,9 @@ def list_document_sources_local() -> list:
     try:
         if Chroma is None:
             return []
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL, model=EMBEDDING_MODEL
+        )
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,
@@ -142,26 +165,33 @@ def debug_get_local_content_for_source(document_source: str) -> dict:
     try:
         if Chroma is None:
             return {"error": "Chroma not installed"}
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL, model=EMBEDDING_MODEL
+        )
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,
             persist_directory=VECTORDB_DIR,
         )
         where_filter = {"source": {"$eq": document_source}}
-        data = vectorstore._collection.get(where=where_filter, include=["documents", "metadatas", "ids"])  # type: ignore
+        data = vectorstore._collection.get(
+            where=where_filter, include=["documents", "metadatas", "ids"]
+        )  # type: ignore
         docs = data.get("documents", []) or []
         metas = data.get("metadatas", []) or []
         ids = data.get("ids", []) or []
         samples = []
         for i, (doc, meta) in enumerate(zip(docs[:3], metas[:3])):
-            samples.append({
-                "id": ids[i] if i < len(ids) else None,
-                "metadata_keys": list((meta or {}).keys()),
-                "source": (meta or {}).get("source", "NO SOURCE"),
-                "page_content_preview": (doc or "")[:200] + ("..." if doc and len(doc) > 200 else ""),
-                "all_metadata": meta,
-            })
+            samples.append(
+                {
+                    "id": ids[i] if i < len(ids) else None,
+                    "metadata_keys": list((meta or {}).keys()),
+                    "source": (meta or {}).get("source", "NO SOURCE"),
+                    "page_content_preview": (doc or "")[:200]
+                    + ("..." if doc and len(doc) > 200 else ""),
+                    "all_metadata": meta,
+                }
+            )
         return {
             "searched_source": document_source,
             "matches_found": len(docs),
@@ -169,4 +199,3 @@ def debug_get_local_content_for_source(document_source: str) -> dict:
         }
     except Exception as e:
         return {"error": str(e)}
-    

@@ -1,12 +1,12 @@
 """
 Shared fixtures and mocks for chain service unit tests.
 """
+
 import pytest
 import os
 from unittest.mock import Mock, MagicMock, patch
 from langchain_core.documents import Document
 
-os.environ.setdefault("EMBEDDING_SOURCE", "ollama")
 os.environ.setdefault("OLLAMA_BASE_URL", "http://localhost:11434")
 os.environ.setdefault("INDEX_NAME", "test-index")
 os.environ.setdefault("VECTORDB_DIR", "/tmp/test_vectordb")
@@ -34,7 +34,7 @@ def mock_ollama_embeddings():
 def mock_vectorstore():
     """Mock Chroma vectorstore for testing."""
     mock = Mock()
-    
+
     # Mock similarity search results
     mock_docs = [
         Document(
@@ -42,22 +42,22 @@ def mock_vectorstore():
             metadata={
                 "source": "test_doc1.pdf",
                 "page": 1,
-                "category_bitmask": 1
-            }
+                "category_bitmask": 1,
+            },
         ),
         Document(
             page_content="Test document content 2",
             metadata={
                 "source": "test_doc2.pdf",
                 "page": 2,
-                "category_bitmask": 1
-            }
-        )
+                "category_bitmask": 1,
+            },
+        ),
     ]
-    
+
     mock.similarity_search.return_value = mock_docs
     mock.as_retriever.return_value = Mock(invoke=Mock(return_value=mock_docs))
-    
+
     return mock
 
 
@@ -65,7 +65,9 @@ def mock_vectorstore():
 def mock_llm():
     """Mock LLM (ChatOpenAI) for testing."""
     mock = Mock()
-    mock.invoke.return_value = Mock(content="This is a test response from the LLM.")
+    mock.invoke.return_value = Mock(
+        content="This is a test response from the LLM."
+    )
     return mock
 
 
@@ -79,8 +81,8 @@ def sample_documents():
                 "source": "python_guide.pdf",
                 "page": 1,
                 "category_bitmask": 1,
-                "chunk_index": 0
-            }
+                "chunk_index": 0,
+            },
         ),
         Document(
             page_content="Machine learning is a subset of artificial intelligence.",
@@ -88,8 +90,8 @@ def sample_documents():
                 "source": "ml_basics.pdf",
                 "page": 5,
                 "category_bitmask": 2,
-                "chunk_index": 1
-            }
+                "chunk_index": 1,
+            },
         ),
         Document(
             page_content="RAG systems combine retrieval and generation.",
@@ -97,9 +99,9 @@ def sample_documents():
                 "source": "rag_overview.pdf",
                 "page": 3,
                 "category_bitmask": 1,
-                "chunk_index": 0
-            }
-        )
+                "chunk_index": 0,
+            },
+        ),
     ]
 
 
@@ -107,7 +109,9 @@ def sample_documents():
 def mock_prompt_manager():
     """Mock PromptManager for testing."""
     mock = Mock()
-    mock.load_template.return_value = "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+    mock.load_template.return_value = (
+        "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+    )
     return mock
 
 
@@ -118,9 +122,13 @@ def mock_rag_chain():
     mock_chain.invoke.return_value = {
         "answer": "Test answer",
         "context": [
-            Document(page_content="Context 1", metadata={"source": "doc1.pdf"}),
-            Document(page_content="Context 2", metadata={"source": "doc2.pdf"})
-        ]
+            Document(
+                page_content="Context 1", metadata={"source": "doc1.pdf"}
+            ),
+            Document(
+                page_content="Context 2", metadata={"source": "doc2.pdf"}
+            ),
+        ],
     }
     return mock_chain
 
@@ -129,10 +137,11 @@ class MockChainComponent(Mock):
     """
     Mock that supports the pipe (|) operator for langchain components.
     """
+
     def __or__(self, other):
         """Support pipe operator for chaining."""
         return MockChainComponent()
-    
+
     def __ror__(self, other):
         """Support reverse pipe operator."""
         return MockChainComponent()

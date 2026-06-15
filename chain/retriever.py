@@ -1,31 +1,37 @@
 import os
+
 from dotenv import load_dotenv
-from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
 
 load_dotenv()
-EMBEDDING_SOURCE = os.environ.get("EMBEDDING_SOURCE")  # "ollama" or "openai"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
+EMBEDDING_MODEL = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
 INDEX_NAME = os.environ.get("INDEX_NAME", "langchain-test-index")
 VECTORDB_DIR = os.environ.get("VECTORDB_DIR", "/data/vectordb")
-DISABLE_FILTER = os.environ.get("RETRIEVER_DISABLE_FILTER", "").lower() in ("1", "true", "yes") # defaults to false (filter active)
+DISABLE_FILTER = os.environ.get("RETRIEVER_DISABLE_FILTER", "").lower() in (
+    "1",
+    "true",
+    "yes",
+)  # defaults to false (filter active)
 
 
 # Tag-to-bitmask mapping for role-based filtering
 # NOTE: These values must stay in sync with loader/tag_management.py!
 # The tag system is managed by the loader, the chain only needs this mapping for filtering
 TAG_BITMASK_MAPPING = {
-    "General": 1 << 0,                          # Bit 0: 1
-    "Research & Development": 1 << 1,           # Bit 1: 2
-    "Marketing & Sales": 1 << 2,                # Bit 2: 4
-    "Production & Manufacturing": 1 << 3,       # Bit 3: 8
-    "Finance & Controlling": 1 << 4,            # Bit 4: 16
-    "Human Resources": 1 << 5,                  # Bit 5: 32
-    "Legal & Compliance": 1 << 6,               # Bit 6: 64
-    "IT & Technology": 1 << 7,                  # Bit 7: 128
-    "Quality Management": 1 << 8,               # Bit 8: 256
-    "Project Documentation": 1 << 9             # Bit 9: 512
+    "General": 1 << 0,  # Bit 0: 1
+    "Research & Development": 1 << 1,  # Bit 1: 2
+    "Marketing & Sales": 1 << 2,  # Bit 2: 4
+    "Production & Manufacturing": 1 << 3,  # Bit 3: 8
+    "Finance & Controlling": 1 << 4,  # Bit 4: 16
+    "Human Resources": 1 << 5,  # Bit 5: 32
+    "Legal & Compliance": 1 << 6,  # Bit 6: 64
+    "IT & Technology": 1 << 7,  # Bit 7: 128
+    "Quality Management": 1 << 8,  # Bit 8: 256
+    "Project Documentation": 1 << 9,  # Bit 9: 512
 }
+
 
 def combine_tag_bitmasks(tags: list) -> int:
     """
@@ -37,13 +43,13 @@ def combine_tag_bitmasks(tags: list) -> int:
         combined_mask |= TAG_BITMASK_MAPPING.get(tag, 0)
     return combined_mask
 
+
 def is_admin_user(user_roles: list) -> bool:
     """
     Checks if a user has admin privileges.
     This function is a copy from tag_management.py for service isolation.
     """
     return "admin" in user_roles
-
 
 
 def create_retriever(
@@ -56,7 +62,7 @@ def create_retriever(
 ) -> object:
     """
     Creates a retriever with optional role-based filtering.
-    
+
     Args:
         index_name (str): The name of the collection/index to use
         returned_docs (int): Number of documents to return
@@ -64,40 +70,36 @@ def create_retriever(
         user_roles (list): List of roles/categories the user has for filtering
         existing_embeddings: Reuse existing embedding instance
         existing_vectorstore: Reuse existing vector store instance
-        
+
     Returns:
         object: A configured retriever with optional role-based filtering
     """
-    
+
     # If an existing vector store is provided, use it directly
     if existing_vectorstore is not None:
         print("🔄 Using existing vector store")
-        
+
         # Apply filter if necessary
         if DISABLE_FILTER or is_admin_user(user_roles):
             # No filter for admin users
             retriever = existing_vectorstore.as_retriever(
-                search_type="similarity",
-                search_kwargs={"k": returned_docs}
+                search_type="similarity", search_kwargs={"k": returned_docs}
             )
         else:
             # Filter for specific roles
             role_bitmask = combine_tag_bitmasks(user_roles)
             where_filter = {"category_bitmask": role_bitmask}
-            
+
             retriever = existing_vectorstore.as_retriever(
                 search_type="similarity",
-                search_kwargs={
-                    "k": returned_docs,
-                    "filter": where_filter
-                }
+                search_kwargs={"k": returned_docs, "filter": where_filter},
             )
-        
+
         return retriever
     # Use INDEX_NAME from environment if not provided
     if index_name is None:
         index_name = INDEX_NAME
-        
+
     # Local Chroma retriever only
     # Normalize roles and numeric parameters
     roles = user_roles or ["General"]
@@ -120,11 +122,9 @@ def create_retriever(
         existing_embeddings=existing_embeddings,
     )
 
-          
-          
+
 def init_filtered_vectorstore(
     index_name: str = None,
-    model: str = "nomic-embed-text",
     user_roles: list = ["General"],
     returned_docs: int = 3,
     similarity_threshold: float = 0.5,
@@ -144,8 +144,10 @@ def init_filtered_vectorstore(
     if existing_embeddings is not None:
         embeddings = existing_embeddings
     else:
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=model)
-        
+        embeddings = OllamaEmbeddings(
+            base_url=OLLAMA_BASE_URL, model=EMBEDDING_MODEL
+        )
+
     vectorstore = Chroma(
         collection_name=index_name,
         embedding_function=embeddings,
@@ -160,8 +162,8 @@ def init_filtered_vectorstore(
         return vectorstore.as_retriever(
             search_type="similarity",
             search_kwargs={
-            "k": returned_docs,
-            # "similarity_score_threshold": similarity_threshold
+                "k": returned_docs,
+                # "similarity_score_threshold": similarity_threshold
             },
         )
 
@@ -173,7 +175,7 @@ def init_filtered_vectorstore(
         )
 
     user_bitmask = combine_tag_bitmasks(user_roles or ["General"])
-    
+
     # IMPORTANT: For general users (bitmask = 1) the filter is problematic
     # because they should read both category_bitmask: 0 and 1,
     # but Chroma doesn't support OR filters.
@@ -183,7 +185,7 @@ def init_filtered_vectorstore(
             search_type="similarity",
             search_kwargs={"k": returned_docs},
         )
-    
+
     # For specific roles: filter only on exact bitmask matches
     if user_bitmask > 1:  # Specific roles (not just general)
         # Simple filter: only documents with exactly this bitmask
@@ -192,7 +194,7 @@ def init_filtered_vectorstore(
             search_type="similarity",
             search_kwargs={"filter": filter_dict, "k": returned_docs},
         )
-    
+
     # Fallback: no filter
     return vectorstore.as_retriever(
         search_type="similarity",
