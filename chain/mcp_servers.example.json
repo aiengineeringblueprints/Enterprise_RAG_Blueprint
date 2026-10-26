@@ -1,0 +1,18 @@
+{
+  "servers": [
+    {
+      "id": "demo",
+      "transport": "streamable_http",
+      "url": "http://mcp-demo:8001/mcp",
+      "allow_plain_http": true,
+      "roles": ["General", "admin"],
+      "read_only_tools": ["get_retention_policy", "add"],
+      "resource_uris": ["blueprint://policy/retention"]
+    }
+  ],
+  "timeout_seconds": 15,
+  "request_timeout_seconds": 90,
+  "max_rounds": 4,
+  "max_calls": 8,
+  "max_result_bytes": 16000
+}

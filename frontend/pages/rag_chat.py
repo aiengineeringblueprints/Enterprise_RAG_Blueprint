@@ -2,6 +2,7 @@ import streamlit as st
 import api_calls
 import html
 import re
+import os
 from chat.chat_manager import ChatManager
 from api_calls import get_document_view_url_api
 
@@ -28,6 +29,14 @@ else:
 
 st.markdown("# RAG Chat 💬")
 st.sidebar.markdown("# RAG Chat 💬")
+use_mcp = st.sidebar.checkbox(
+    "Use MCP servers", value=False,
+    disabled=os.getenv("MCP_ENABLED", "false").lower() not in {"true", "1", "yes"},
+    help="Use external tools and resources approved by your administrator.",
+)
+if st.session_state.get("last_mcp"):
+    with st.sidebar.expander("MCP activity for the last answer"):
+        st.json(st.session_state.last_mcp)
 
 # Create columns for chat and document display
 col1, col2 = st.columns([2, 1])  # Chat nimmt 2/3, Dokumente 1/3
@@ -373,6 +382,7 @@ with col1:
                 show_sources=True,
                 user_roles=user_roles,
                 chat_history=chat_history,
+                use_mcp=use_mcp,
             )           
             
             # Store relevant documents in session state for display

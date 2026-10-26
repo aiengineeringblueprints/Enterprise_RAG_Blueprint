@@ -9,6 +9,8 @@ To try the RAG Reference Application, fork and clone the repository
 
 Rename the ```example.env``` to ```.env``` and add the Base URL, API Key and Model name for your LLM. Note: The call to the LLM is executed using an OpenAI-compatible API (https://platform.openai.com/docs/api-reference/chat/create) which calls ```[baseurl]/chat/completions```.
 
+Requests are sent with `temperature=0` by default. Set `LLM_TEMPERATURE` in `.env` to use another value, or leave it empty (`LLM_TEMPERATURE=`) to omit the parameter for models that reject it (for example, newer Anthropic models via their OpenAI-compatible endpoint). Otherwise every LLM call fails, including the input guardrail check.
+
 then run 
 ```
 docker compose up --build
@@ -17,6 +19,8 @@ docker compose up --build
 All containers will be built or downloaded and started on your local machine. 
 
 The first start will take some time due to the building of the containers and pulling the embedding model for the ollama container.
+
+Document storage uses the MinIO image `cgr.dev/chainguard/minio`, because `minio/minio` is no longer available on Docker Hub. It is a drop-in replacement with the same command, credentials and `minio_data` volume. The image contains no `curl`, so its health check uses `mc ready local`.
 
 The Frontend is accessable via 
 ```
@@ -36,6 +40,10 @@ Deployment is configured using GitHub Actions and a CI/CD pipeline. You can find
 
 ## Architecture
 The architecture design can be found in the associated paper of this repository. The diagrams can be found in the folder architecture.
+
+## Optional MCP integration
+
+The chain service can connect to MCP servers over Streamable HTTP or stdio and use approved tools and resources alongside document retrieval. MCP is disabled by default. See [MCP setup, architecture, and research notes](docs/mcp.md) for the demo Compose profile, configuration, identity boundary, and tests.
 
 ## Open Topics
 - Automated naming of chats 

@@ -16,3 +16,7 @@ logging
 opentelemetry-distro
 opentelemetry-instrumentation-fastapi
 opentelemetry-exporter-otlp
+
+# MCP client SDK and local schema validation (tested versions).
+mcp==1.29.1
+jsonschema==4.26.0

@@ -130,15 +130,20 @@ def load_llm_model(source: str) -> object:
         object: An instance of the ChatOpenAI model.
     Notes:
         - The temperature parameter controls the balance between fact-correctness and creativity.
-          A lower value (e.g., 0.1) favors fact-correctness.
+          A lower value (e.g., 0.1) favors fact-correctness. It is read from LLM_TEMPERATURE
+          (default 0); an empty value omits it for models that reject the parameter.
         - The model uses the MODEL_NAME environment variable with a default of "qwen15_72b_chat".
     """
     llm = None
     if source == "openai":
+        options = {}
+        temperature = os.getenv("LLM_TEMPERATURE", "0").strip()
+        if temperature:
+            options["temperature"] = float(temperature)
         llm = ChatOpenAI(
             # model_name="gpt-3.5-turbo",
             model_name=MODEL_NAME, # 32k token context length
-            temperature=0,
+            **options,
         )
     else:
         raise ValueError(f"Unsupported LLM source: {source}. Please use 'openai'.")

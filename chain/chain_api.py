@@ -1,7 +1,8 @@
 import os
 import uvicorn
 import logging
-from fastapi import FastAPI, HTTPException
+import asyncio
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, Field
 from typing import Union, List
 from prompts.promt_manager import PromptKey
@@ -25,6 +26,7 @@ class ChatMessage(BaseModel):
 
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=1)
+    use_mcp: bool = False
     prompt_key: Union[PromptKey, str] = PromptKey.SOURCE
     used_model: str = LLM_SOURCE_ANSWER
     show_sources: bool = True
@@ -53,8 +55,10 @@ async def health_check():
     return HealthResponse(status="healthy", service="chain")
 
 @app.post("/call_llm")
-async def call_llm_endpoint(request: QuestionRequest):
+async def call_llm_endpoint(request: QuestionRequest, authorization: str | None = Header(default=None)):
     try:
+        if request.use_mcp:
+            return await call_mcp_endpoint(request, authorization)
         allowed, reason = ensure_input_allowed(request.question)
         if not allowed:
             raise HTTPException(status_code=400, detail=reason or "Input blocked by guardrails.")
@@ -96,6 +100,49 @@ async def call_llm_endpoint(request: QuestionRequest):
     except Exception as e:
         logging.exception("/call_llm failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def call_mcp_endpoint(request: QuestionRequest, authorization: str | None):
+    from mcp_integration.config import enabled, load_config
+    from mcp_integration.identity import verify_identity
+    from mcp_integration.execution import answer_with_mcp, MCPModelError
+
+    if not enabled():
+        raise HTTPException(503, "MCP is disabled")
+    identity = verify_identity(authorization)
+    if len(request.question) > 16000 or len(request.chat_history) > 100:
+        raise HTTPException(422, "MCP question or history exceeds the input limit")
+    try:
+        prompt_key = PromptKey(request.prompt_key)
+    except ValueError:
+        raise HTTPException(422, "Invalid prompt_key") from None
+    if prompt_key not in {PromptKey.SOURCE, PromptKey.SUMMARY, PromptKey.WEEKLY_REPORT}:
+        raise HTTPException(422, "This prompt is not supported for MCP chat")
+    try:
+        config = load_config()
+    except Exception:
+        logging.getLogger("rag.mcp").error("mcp_configuration_invalid")
+        raise HTTPException(503, "MCP configuration is invalid") from None
+    try:
+        async with asyncio.timeout(config.request_timeout_seconds):
+            allowed, reason = await asyncio.to_thread(ensure_input_allowed, request.question, fail_closed=True)
+            if not allowed:
+                raise HTTPException(400, reason or "Input blocked by guardrails.")
+            normalized = request.model_copy(update={
+                "prompt_key": prompt_key,
+                "used_model": request.used_model or LLM_SOURCE_ANSWER,
+                "user_roles": list(identity.roles),
+            })
+            return await answer_with_mcp(normalized, identity, config)
+    except HTTPException:
+        raise
+    except TimeoutError:
+        raise HTTPException(504, "MCP request timed out") from None
+    except MCPModelError as exc:
+        raise HTTPException(502, str(exc)) from None
+    except Exception:
+        logging.getLogger("rag.mcp").error("mcp_request_failed")
+        raise HTTPException(502, "MCP-enabled RAG request failed") from None
     
 @app.post("/check_answer")
 async def check_answer_endpoint(request: QuestionCheckRequest):

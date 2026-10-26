@@ -298,6 +298,7 @@ class TestCallLLM:
 
 class TestLoadLLMModel:
 
+    @patch.dict(os.environ, {"LLM_TEMPERATURE": "0"})
     @patch('handle_llms.ChatOpenAI')
     def test_load_llm_model_openai(self, mock_chat_openai):
 
@@ -314,6 +315,7 @@ class TestLoadLLMModel:
         assert 'model_name' in call_args[1]
         assert call_args[1]['temperature'] == 0
         
+    @patch.dict(os.environ, {"LLM_TEMPERATURE": "0"})
     @patch('handle_llms.ChatOpenAI')
     def test_load_llm_model_with_temperature_fixed(self, mock_chat_openai):
 
@@ -326,6 +328,26 @@ class TestLoadLLMModel:
         
         call_args = mock_chat_openai.call_args
         assert call_args[1]['temperature'] == 0
+
+    @patch.dict(os.environ, {"LLM_TEMPERATURE": ""})
+    @patch('handle_llms.ChatOpenAI')
+    def test_load_llm_model_omits_temperature_when_empty(self, mock_chat_openai):
+
+        from handle_llms import load_llm_model
+
+        load_llm_model(source="openai")
+
+        assert 'temperature' not in mock_chat_openai.call_args[1]
+
+    @patch.dict(os.environ, {"LLM_TEMPERATURE": "0.3"})
+    @patch('handle_llms.ChatOpenAI')
+    def test_load_llm_model_uses_configured_temperature(self, mock_chat_openai):
+
+        from handle_llms import load_llm_model
+
+        load_llm_model(source="openai")
+
+        assert mock_chat_openai.call_args[1]['temperature'] == 0.3
         
     def test_load_llm_model_invalid_source(self):
 

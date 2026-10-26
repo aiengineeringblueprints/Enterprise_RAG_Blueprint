@@ -7,7 +7,7 @@ from prompts.promt_manager import PromptKey, PromptManager
 _BLOCKED_MESSAGE = "Your input has been blocked by the security guidelines. Please rephrase your request."
 
 
-def ensure_input_allowed(user_input: str) -> Tuple[bool, Optional[str]]:
+def ensure_input_allowed(user_input: str, *, fail_closed: bool = False) -> Tuple[bool, Optional[str]]:
     """
     Validate user input via guardrails.
     
@@ -40,5 +40,7 @@ def ensure_input_allowed(user_input: str) -> Tuple[bool, Optional[str]]:
         return (True, None)
             
     except Exception:
+        if fail_closed:
+            return (False, "Input validation is temporarily unavailable.")
         # On error, allow the input to pass through (fail-open)
         return (True, None)

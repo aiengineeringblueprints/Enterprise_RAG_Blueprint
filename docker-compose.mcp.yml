@@ -1,0 +1,19 @@
+# Optional override: docker compose -f docker-compose.yml -f docker-compose.mcp.yml --profile mcp up --build
+services:
+  mcp-demo:
+    build: ./chain
+    profiles: [mcp]
+    user: "5678:5678"
+    entrypoint: ["python", "/app/mcp_demo/server.py"]
+    networks: [rag_network]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  chain:
+    environment:
+      MCP_ENABLED: "true"
+      MCP_CONFIG_FILE: /app/mcp_servers.example.json
+  frontend:
+    environment:
+      MCP_ENABLED: "true"

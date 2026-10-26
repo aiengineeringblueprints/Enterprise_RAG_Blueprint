@@ -67,6 +67,7 @@ def llm_api(
     used_model="",
     user_roles=["Allgemein"],
     chat_history=None,
+    use_mcp=False,
 ):
     url = CHAIN_URL + "call_llm"
 
@@ -85,11 +86,20 @@ def llm_api(
         "show_sources": show_sources,
         "user_roles": user_roles,
         "chat_history": formatted_history,
+        "use_mcp": use_mcp,
     }
     try:
-        response = requests.post(url, json=payload)
+        headers = {}
+        st.session_state.last_mcp = None
+        if use_mcp:
+            from authentication.mcp_identity import sign_identity
+            if not st.session_state.get("logged_in"):
+                raise ValueError("Please log in before using MCP")
+            headers["Authorization"] = sign_identity(st.session_state.get("user_info", {}))
+        response = requests.post(url, json=payload, headers=headers, timeout=310)
         if response.status_code == 200:
             data = response.json()
+            st.session_state.last_mcp = data.get("mcp")
             return data["result"], data["relevant_documents"], data["prompt_key"]
         elif response.status_code == 400:
             # Guardrail blocked the input - return user-friendly message without showing error banner
@@ -107,6 +117,9 @@ def llm_api(
         else:
             st.error(f"LLM API Error: {response.status_code} - {response.text}")
             return f"API Error: {response.status_code}", [], prompt_key
+    except ValueError as e:
+        st.error(str(e))
+        return "API Error: MCP identity is not configured", [], prompt_key
     except requests.exceptions.RequestException as e:
         st.error(f"Verbindungsfehler: {str(e)}")
         return "Es ist ein Verbindungsfehler aufgetreten.", [], prompt_key
