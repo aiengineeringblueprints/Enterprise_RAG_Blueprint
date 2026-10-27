@@ -157,6 +157,27 @@ class TestCallLLM:
             include_doc_names=True,
             chat_history=None
         )
+
+    @pytest.mark.parametrize("configured, expected", [(None, 5), ("8", 8), ("zero", 5), ("0", 5)])
+    @patch('handle_llms.load_chain')
+    @patch('handle_llms.create_retriever')
+    @patch('handle_llms.load_llm_model')
+    @patch('handle_llms.rag_chain')
+    def test_call_llm_retrieves_configured_top_k(
+        self, mock_rag_chain, mock_load_llm, mock_create_retriever, mock_load_chain_func,
+        configured, expected,
+    ):
+
+        from handle_llms import call_llm
+
+        mock_rag_chain.return_value = ("answer", [])
+        with patch.dict(os.environ, {"DISABLE_QUERY_REFINEMENT": "true"}):
+            os.environ.pop("RETRIEVER_TOP_K", None)
+            if configured is not None:
+                os.environ["RETRIEVER_TOP_K"] = configured
+            call_llm(question="q")
+
+        assert mock_create_retriever.call_args[1]['returned_docs'] == expected
     
     @patch('handle_llms.load_chain')
     @patch('handle_llms.create_retriever')
@@ -348,6 +369,19 @@ class TestLoadLLMModel:
         load_llm_model(source="openai")
 
         assert mock_chat_openai.call_args[1]['temperature'] == 0.3
+
+    @patch('handle_llms.ChatOpenAI')
+    def test_load_llm_model_reads_model_name_per_call(self, mock_chat_openai):
+
+        from handle_llms import load_llm_model
+
+        with patch.dict(os.environ, {"MODEL_NAME": "model-a"}):
+            load_llm_model(source="openai")
+        with patch.dict(os.environ, {"MODEL_NAME": "model-b"}):
+            load_llm_model(source="openai")
+
+        names = [c[1]['model_name'] for c in mock_chat_openai.call_args_list]
+        assert names == ["model-a", "model-b"]
         
     def test_load_llm_model_invalid_source(self):
 

@@ -29,6 +29,15 @@ def _parse_float(value, default=0.5, min_v=0.0, max_v=1.0) -> float:
     return v
 
 
+def retriever_top_k(default: int = 5) -> int:
+    """Number of documents to retrieve, read per call from RETRIEVER_TOP_K."""
+    try:
+        k = int(os.getenv("RETRIEVER_TOP_K", default))
+    except ValueError:
+        return default
+    return k if k > 0 else default
+
+
 def _normalize_roles(roles) -> list:
     """Ensure a non-empty list of roles; default to ['General'] when empty/invalid."""
     if not roles:
@@ -82,7 +91,7 @@ def call_llm(
     refined_question = refine_query(question)
     
     retriever = create_retriever(
-        returned_docs=5,
+        returned_docs=retriever_top_k(),
         similarity_threshold=threshold,
         user_roles=roles,
     )
@@ -141,8 +150,8 @@ def load_llm_model(source: str) -> object:
         if temperature:
             options["temperature"] = float(temperature)
         llm = ChatOpenAI(
-            # model_name="gpt-3.5-turbo",
-            model_name=MODEL_NAME, # 32k token context length
+            # Read per call so the model can change without restarting.
+            model_name=os.getenv("MODEL_NAME", MODEL_NAME),
             **options,
         )
     else:

@@ -74,7 +74,12 @@ async def run_tool_loop(model, messages, manager: ClientManager):
 
 async def answer_with_mcp(request, identity: Identity, config: MCPConfig):
     # Lazy imports keep the MCP transport layer independent of Chroma/LLM services.
-    from handle_llms import RETRIEVER_SIMILARITY_THRESHOLD, _parse_float, load_llm_model
+    from handle_llms import (
+        RETRIEVER_SIMILARITY_THRESHOLD,
+        _parse_float,
+        load_llm_model,
+        retriever_top_k,
+    )
     from langchain_core.prompts import ChatPromptTemplate
     from load_chain import format_docs
     from prompts.promt_manager import PromptManager
@@ -87,7 +92,7 @@ async def answer_with_mcp(request, identity: Identity, config: MCPConfig):
     refined = await asyncio.to_thread(refine_query, request.question)
     retriever = await asyncio.to_thread(
         create_retriever,
-        returned_docs=5,
+        returned_docs=retriever_top_k(),
         similarity_threshold=_parse_float(RETRIEVER_SIMILARITY_THRESHOLD),
         user_roles=list(identity.roles),
     )

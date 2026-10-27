@@ -53,6 +53,37 @@ class TestUploadDocumentsToVectorstore:
         upload_documents_to_vectorstore(docs, index_name="custom-index")
         
         assert mock_chroma_class.call_args[1]["collection_name"] == "custom-index"
+
+    @patch('loader.vector_store.Chroma')
+    @patch('loader.vector_store.OllamaEmbeddings')
+    @patch('loader.vector_store.os.makedirs')
+    def test_upload_uses_configured_embedding_model(self, mock_makedirs, mock_embeddings_class, mock_chroma_class):
+
+        docs = [Document(page_content="Test", metadata={"source": "test.txt"})]
+
+        with patch.dict(os.environ, {"EMBEDDING_MODEL": "bge-m3"}):
+            upload_documents_to_vectorstore(docs)
+        with patch.dict(os.environ):
+            os.environ.pop("EMBEDDING_MODEL", None)
+            upload_documents_to_vectorstore(docs)
+
+        models = [c[1]["model"] for c in mock_embeddings_class.call_args_list]
+        assert models == ["bge-m3", "nomic-embed-text"]
+
+    @patch('loader.vector_store.Chroma')
+    @patch('loader.vector_store.OllamaEmbeddings')
+    @patch('loader.vector_store.os.makedirs')
+    def test_upload_sends_ollama_api_key_as_bearer(self, mock_makedirs, mock_embeddings_class, mock_chroma_class):
+
+        docs = [Document(page_content="Test", metadata={"source": "test.txt"})]
+
+        with patch.dict(os.environ, {"OLLAMA_API_KEY": "secret-token", "OLLAMA_BASE_URL": "http://gpu:11434"}):
+            upload_documents_to_vectorstore(docs)
+
+        assert mock_embeddings_class.call_args[1]["base_url"] == "http://gpu:11434"
+        assert mock_embeddings_class.call_args[1]["client_kwargs"] == {
+            "headers": {"Authorization": "Bearer secret-token"}
+        }
     
     @patch('loader.vector_store.Chroma')
     @patch('loader.vector_store.OllamaEmbeddings')

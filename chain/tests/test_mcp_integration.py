@@ -379,6 +379,24 @@ async def test_complete_rag_with_real_mcp_and_scripted_model():
     assert "Restricted content" not in str(bound.ainvoke.call_args)
 
 
+@pytest.mark.asyncio
+async def test_mcp_path_retrieves_configured_top_k(monkeypatch):
+    from chain_api import QuestionRequest
+    from prompts.promt_manager import PromptKey
+
+    monkeypatch.setenv("RETRIEVER_TOP_K", "9")
+    model = Mock(ainvoke=AsyncMock(return_value=AIMessage(content="ok")))
+    retriever = Mock(ainvoke=AsyncMock(return_value=[]))
+    request = QuestionRequest(question="q", prompt_key=PromptKey.SOURCE, used_model="openai")
+    with (
+        patch("handle_llms.load_llm_model", return_value=model),
+        patch("retriever.create_retriever", return_value=retriever) as create,
+        patch("query_refinement.refine_query", return_value="q"),
+    ):
+        await answer_with_mcp(request, Identity("alice", ("General",)), MCPConfig(servers=[]))
+    assert create.call_args.kwargs["returned_docs"] == 9
+
+
 def test_document_policy_denies_unknown_tags_and_restricted_content():
     from langchain_core.documents import Document
     from mcp_integration.policy import permitted_documents

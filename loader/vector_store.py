@@ -13,6 +13,20 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
 INDEX_NAME = os.environ.get("INDEX_NAME", "langchain-test-index")
 # Shared directory for local vector store persistence (mounted into loader + chain)
 VECTORDB_DIR = os.environ.get("VECTORDB_DIR", "/data/vectordb")
+# The chain must query with the same model (chain/retriever.py).
+DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"
+
+
+def _embeddings() -> OllamaEmbeddings:
+    options = {}
+    api_key = os.environ.get("OLLAMA_API_KEY")
+    if api_key:  # Ollama behind an authenticating proxy
+        options["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
+    return OllamaEmbeddings(
+        base_url=os.environ.get("OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+        model=os.environ.get("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
+        **options,
+    )
 
 
 def upload_documents_to_vectorstore(all_splits: List[Document], index_name: Optional[str] = None) -> None:
@@ -30,7 +44,7 @@ def upload_documents_to_vectorstore(all_splits: List[Document], index_name: Opti
     os.makedirs(VECTORDB_DIR, exist_ok=True)
 
     print(f"Uploading {len(documents)} documents to local Chroma at {VECTORDB_DIR}, collection={index_name}")
-    embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+    embeddings = _embeddings()
     vectorstore = Chroma(
         collection_name=index_name,
         embedding_function=embeddings,
@@ -73,7 +87,7 @@ def get_full_document_content_local(document_source: str) -> Optional[str]:
     try:
         if Chroma is None:
             raise RuntimeError("Chroma not installed")
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = _embeddings()
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,
@@ -118,7 +132,7 @@ def list_document_sources_local() -> list:
     try:
         if Chroma is None:
             return []
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = _embeddings()
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,
@@ -142,7 +156,7 @@ def debug_get_local_content_for_source(document_source: str) -> dict:
     try:
         if Chroma is None:
             return {"error": "Chroma not installed"}
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model="nomic-embed-text")
+        embeddings = _embeddings()
         vectorstore = Chroma(
             collection_name=INDEX_NAME,
             embedding_function=embeddings,

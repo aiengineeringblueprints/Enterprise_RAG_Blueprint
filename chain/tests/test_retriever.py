@@ -228,6 +228,45 @@ class TestInitFilteredVectorstore:
     @patch('retriever.os.makedirs')
     @patch('retriever.Chroma')
     @patch('retriever.OllamaEmbeddings')
+    def test_embedding_model_defaults_to_nomic(self, mock_embeddings, mock_chroma, mock_makedirs):
+
+        from retriever import init_filtered_vectorstore
+
+        with patch.dict(os.environ):
+            os.environ.pop("EMBEDDING_MODEL", None)
+            init_filtered_vectorstore()
+
+        assert mock_embeddings.call_args[1]['model'] == "nomic-embed-text"
+
+    @patch('retriever.os.makedirs')
+    @patch('retriever.Chroma')
+    @patch('retriever.OllamaEmbeddings')
+    def test_embedding_model_and_url_are_read_per_call(self, mock_embeddings, mock_chroma, mock_makedirs):
+
+        from retriever import create_retriever
+
+        with patch.dict(os.environ, {"EMBEDDING_MODEL": "bge-m3", "OLLAMA_BASE_URL": "http://gpu:11434"}):
+            create_retriever()
+
+        assert mock_embeddings.call_args[1] == {"base_url": "http://gpu:11434", "model": "bge-m3"}
+
+    @patch('retriever.os.makedirs')
+    @patch('retriever.Chroma')
+    @patch('retriever.OllamaEmbeddings')
+    def test_ollama_api_key_is_sent_as_bearer(self, mock_embeddings, mock_chroma, mock_makedirs):
+
+        from retriever import create_retriever
+
+        with patch.dict(os.environ, {"OLLAMA_API_KEY": "secret-token"}):
+            create_retriever()
+
+        assert mock_embeddings.call_args[1]['client_kwargs'] == {
+            "headers": {"Authorization": "Bearer secret-token"}
+        }
+
+    @patch('retriever.os.makedirs')
+    @patch('retriever.Chroma')
+    @patch('retriever.OllamaEmbeddings')
     def test_reuse_existing_embeddings(self, mock_embeddings, mock_chroma, mock_makedirs):
 
         from retriever import init_filtered_vectorstore

@@ -20,6 +20,7 @@ MCP integration (new, opt-in):
 General fixes on the same branch (they also affect non-MCP use):
 
 - `LLM_TEMPERATURE` (default `0`) configures the sampling temperature. Set it empty to omit the parameter for models that reject it (`chain/handle_llms.py`).
+- Model and retrieval settings are read per request, not once at import, so an in-process caller (e.g. a benchmark) can change them between requests: `MODEL_NAME` (`chain/handle_llms.py`), new `EMBEDDING_MODEL` (default `nomic-embed-text`; `chain/retriever.py` and `loader/vector_store.py`) together with `OLLAMA_BASE_URL` and new `OLLAMA_API_KEY` (sent as Bearer token for Ollama behind an authenticating proxy), and new `RETRIEVER_TOP_K` (default `5`, legacy and MCP path). Defaults keep the previous behavior. Changing `EMBEDDING_MODEL` requires re-uploading all documents.
 - MinIO now uses `cgr.dev/chainguard/minio`, because `minio/minio` is no longer available on Docker Hub. Its health check is `mc ready local`.
 
 ## Code map

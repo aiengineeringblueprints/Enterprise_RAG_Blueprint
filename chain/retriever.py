@@ -6,6 +6,8 @@ from langchain_chroma import Chroma
 load_dotenv()
 EMBEDDING_SOURCE = os.environ.get("EMBEDDING_SOURCE")  # "ollama" or "openai"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
+# Must match the model the loader indexed with (loader/vector_store.py).
+DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"
 INDEX_NAME = os.environ.get("INDEX_NAME", "langchain-test-index")
 VECTORDB_DIR = os.environ.get("VECTORDB_DIR", "/data/vectordb")
 DISABLE_FILTER = os.environ.get("RETRIEVER_DISABLE_FILTER", "").lower() in ("1", "true", "yes") # defaults to false (filter active)
@@ -124,7 +126,7 @@ def create_retriever(
           
 def init_filtered_vectorstore(
     index_name: str = None,
-    model: str = "nomic-embed-text",
+    model: str = None,
     user_roles: list = ["General"],
     returned_docs: int = 3,
     similarity_threshold: float = 0.5,
@@ -144,7 +146,16 @@ def init_filtered_vectorstore(
     if existing_embeddings is not None:
         embeddings = existing_embeddings
     else:
-        embeddings = OllamaEmbeddings(base_url=OLLAMA_BASE_URL, model=model)
+        # Read per call so the embedding model can change without restarting.
+        options = {}
+        api_key = os.environ.get("OLLAMA_API_KEY")
+        if api_key:  # Ollama behind an authenticating proxy
+            options["client_kwargs"] = {"headers": {"Authorization": f"Bearer {api_key}"}}
+        embeddings = OllamaEmbeddings(
+            base_url=os.environ.get("OLLAMA_BASE_URL", OLLAMA_BASE_URL),
+            model=model or os.environ.get("EMBEDDING_MODEL") or DEFAULT_EMBEDDING_MODEL,
+            **options,
+        )
         
     vectorstore = Chroma(
         collection_name=index_name,
