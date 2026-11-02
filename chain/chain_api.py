@@ -3,8 +3,8 @@ import uvicorn
 import logging
 import asyncio
 from fastapi import FastAPI, HTTPException, Header
-from pydantic import BaseModel, Field
-from typing import Union, List
+from pydantic import BaseModel, Field, model_validator
+from typing import Union, List, Literal
 from prompts.promt_manager import PromptKey
 from check_answers_llm import check_answer_with_second_llm, check_answer_with_keywords
 from handle_llms import call_llm
@@ -27,6 +27,9 @@ class ChatMessage(BaseModel):
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=1)
     use_mcp: bool = False
+    # MCP path only: "context" retrieves documents before the model runs, "tool"
+    # offers retrieval as a tool the model may call, "none" answers from MCP alone.
+    retrieval: Literal["context", "tool", "none"] = "context"
     prompt_key: Union[PromptKey, str] = PromptKey.SOURCE
     used_model: str = LLM_SOURCE_ANSWER
     show_sources: bool = True
@@ -34,6 +37,12 @@ class QuestionRequest(BaseModel):
     chat_history: List[ChatMessage] = Field(
         default_factory=list
     ) 
+
+    @model_validator(mode="after")
+    def _rag_or_mcp(self):
+        if self.retrieval != "context" and not self.use_mcp:
+            raise ValueError(f"retrieval={self.retrieval} requires use_mcp=true")
+        return self
 
 class QuestionCheckRequest(BaseModel):
     question: str = Field(min_length=1)

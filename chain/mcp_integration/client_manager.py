@@ -37,6 +37,16 @@ def _has_ref(value):
     return isinstance(value, list) and any(_has_ref(v) for v in value)
 
 
+def tool_fingerprint(name: str, description: str, schema: dict) -> str:
+    """sha256 over a tool's name, description and input schema (for pinned_tools)."""
+    canonical = json.dumps(
+        {"name": name, "description": description, "inputSchema": schema},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 @dataclass
 class Capability:
     alias: str
@@ -47,6 +57,7 @@ class Capability:
     schema: dict
     validator: object
     session: ClientSession
+    raw_description: str = ""
 
     def definition(self):
         return {
@@ -149,11 +160,13 @@ class ClientManager:
             raise ValueError("Tool input schema must be an object")
         validator_class = validator_for(schema)
         validator_class.check_schema(schema)
-        digest = hashlib.sha256(f"{server.id}:{kind}:{original}".encode()).hexdigest()[
-            :12
-        ]
-        label = re.sub(r"[^a-zA-Z0-9_-]", "_", original)[:20]
-        alias = f"{server.id}__{label}__{digest}"
+        # Plain "<server>__<name>" aliases: models repeat them reliably. A digest
+        # is appended only when sanitizing collides or the name is too long.
+        label = re.sub(r"[^a-zA-Z0-9_-]", "_", original)
+        alias = f"{server.id}__{label}"
+        if len(alias) > 64 or alias in self.capabilities:
+            digest = hashlib.sha256(f"{server.id}:{kind}:{original}".encode()).hexdigest()[:12]
+            alias = f"{server.id}__{label[: 64 - len(server.id) - 16]}__{digest}"
         if alias in self.capabilities:
             raise ValueError("Duplicate capability")
         self.capabilities[alias] = Capability(
@@ -165,6 +178,7 @@ class ClientManager:
             schema,
             validator_class(schema),
             session,
+            raw_description=description,
         )
 
     @asynccontextmanager
@@ -182,15 +196,22 @@ class ClientManager:
                     )
                     if supported.tools and server.read_only_tools:
                         for tool in await self._pages(session.list_tools, "tools"):
-                            if tool.name in server.read_only_tools:
-                                self._register(
-                                    server,
-                                    session,
-                                    tool.name,
-                                    "tool",
-                                    tool.description or tool.name,
-                                    tool.inputSchema,
-                                )
+                            if tool.name not in server.read_only_tools:
+                                continue
+                            pin = server.pinned_tools.get(tool.name)
+                            if pin and pin != tool_fingerprint(
+                                tool.name, tool.description or "", tool.inputSchema
+                            ):
+                                self.event(server.id, "pin", "denied", tool=tool.name)
+                                continue
+                            self._register(
+                                server,
+                                session,
+                                tool.name,
+                                "tool",
+                                tool.description or tool.name,
+                                tool.inputSchema,
+                            )
                     if supported.resources and server.resource_uris:
                         for resource in await self._pages(
                             session.list_resources, "resources"

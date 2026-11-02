@@ -2,6 +2,7 @@
 
 import asyncio
 import importlib.util
+import re
 import socket
 import subprocess
 import sys
@@ -11,7 +12,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 from fastapi import HTTPException
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from mcp import types
 from pydantic import ValidationError
 
@@ -135,6 +136,35 @@ async def test_real_stdio_discovery_validation_execution_and_resource():
 
 
 @pytest.mark.asyncio
+async def test_aliases_are_plain_server_tool_names_models_can_repeat():
+    # Models drop opaque suffixes when they repeat a tool name; keep the alias
+    # to the server id and the tool name unless that would collide.
+    host = manager(MCPConfig(servers=[stdio_server()]))
+    async with host.open():
+        aliases = {c.original: c.alias for c in host.capabilities.values()}
+        assert aliases["add"] == "demo__add"
+        assert aliases["get_retention_policy"] == "demo__get_retention_policy"
+        assert all(re.fullmatch(r"[A-Za-z0-9_-]{1,64}", a) for a in aliases.values())
+        result, failed = await host.execute("demo__add", {"a": 2, "b": 3})
+        assert not failed and "5" in result["content"][0]
+
+
+@pytest.mark.asyncio
+async def test_pinned_tool_definition_mismatch_is_not_exposed():
+    from mcp_integration.client_manager import tool_fingerprint
+
+    probe = manager(MCPConfig(servers=[stdio_server(resource_uris=[])]))
+    async with probe.open():
+        policy = next(c for c in probe.capabilities.values() if c.original == "get_retention_policy")
+        good = tool_fingerprint(policy.original, policy.raw_description, policy.schema)
+    pins = {"get_retention_policy": good, "add": "0" * 64}
+    host = manager(MCPConfig(servers=[stdio_server(resource_uris=[], pinned_tools=pins)]))
+    async with host.open():
+        assert {c.original for c in host.capabilities.values()} == {"get_retention_policy"}
+    assert {"server": "demo", "operation": "pin", "status": "denied", "tool": "add"} in host.events
+
+
+@pytest.mark.asyncio
 async def test_real_stdio_timeout_and_oversized_result():
     host = manager(MCPConfig(servers=[stdio_server(read_only_tools=["slow_read"])]))
     async with host.open():
@@ -238,6 +268,9 @@ async def test_bounded_tool_loop_preserves_call_ids_and_forces_final_answer():
     tool_message = next(m for m in messages if isinstance(m, ToolMessage))
     assert tool_message.tool_call_id == "call-1" and tool_message.status == "error"
     assert model.ainvoke.await_count == 2
+    # Some OpenAI-compatible backends reject system messages after the first turn.
+    final_messages = model.ainvoke.call_args.args[0]
+    assert not any(isinstance(m, SystemMessage) for m in final_messages[1:])
 
 
 @pytest.mark.asyncio
@@ -395,6 +428,100 @@ async def test_mcp_path_retrieves_configured_top_k(monkeypatch):
     ):
         await answer_with_mcp(request, Identity("alice", ("General",)), MCPConfig(servers=[]))
     assert create.call_args.kwargs["returned_docs"] == 9
+
+
+@pytest.mark.asyncio
+async def test_mcp_only_request_skips_retrieval_and_cites_only_mcp():
+    from chain_api import QuestionRequest
+    from prompts.promt_manager import PromptKey
+
+    model = Mock()
+    bound = Mock()
+    model.bind_tools.return_value = bound
+
+    async def respond(messages):
+        if not any(isinstance(m, ToolMessage) for m in messages):
+            alias = model.bind_tools.call_args.args[0][0]["function"]["name"]
+            return AIMessage(content="", tool_calls=[{"name": alias, "args": {}, "id": "p-1"}])
+        return AIMessage(content="Retention is 30 days [demo].")
+
+    bound.ainvoke = AsyncMock(side_effect=respond)
+    config = MCPConfig(
+        servers=[stdio_server(read_only_tools=["get_retention_policy"], resource_uris=[])]
+    )
+    request = QuestionRequest(
+        question="What is the retention period?",
+        use_mcp=True,
+        retrieval="none",
+        prompt_key=PromptKey.SOURCE,
+        used_model="openai",
+    )
+    with (
+        patch("handle_llms.load_llm_model", return_value=model),
+        patch("retriever.create_retriever") as create,
+        patch("query_refinement.refine_query") as refine,
+    ):
+        result = await answer_with_mcp(request, Identity("alice", ("General",)), config)
+    create.assert_not_called()
+    refine.assert_not_called()
+    assert result["result"] == "Retention is 30 days [demo]."
+    assert [s.split("->")[0] for s in result["relevant_documents"]] == [
+        "MCP demo/get_retention_policy"
+    ]
+
+
+@pytest.mark.parametrize("retrieval", ["none", "tool", "sometimes"])
+def test_retrieval_modes_other_than_context_require_mcp(retrieval):
+    from chain_api import app
+    from fastapi.testclient import TestClient
+
+    response = TestClient(app).post(
+        "/call_llm", json={"question": "x", "use_mcp": False, "retrieval": retrieval}
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_retrieval_as_tool_searches_only_when_the_model_asks():
+    from chain_api import QuestionRequest
+    from langchain_core.documents import Document
+    from prompts.promt_manager import PromptKey
+
+    model = Mock()
+    bound = Mock()
+    model.bind_tools.return_value = bound
+
+    async def respond(messages):
+        if not any(isinstance(m, ToolMessage) for m in messages):
+            names = [d["function"]["name"] for d in model.bind_tools.call_args.args[0]]
+            assert names == ["rag__search_documents"]
+            return AIMessage(content="", tool_calls=[{
+                "name": "rag__search_documents", "args": {"query": "retention"}, "id": "s-1"}],
+                usage_metadata={"input_tokens": 100, "output_tokens": 10, "total_tokens": 110})
+        assert "Keep records for 7 years" in messages[-1].content
+        assert "Restricted content" not in messages[-1].content
+        return AIMessage(content="Seven years [handbook.pdf].",
+                         usage_metadata={"input_tokens": 300, "output_tokens": 20, "total_tokens": 320})
+
+    bound.ainvoke = AsyncMock(side_effect=respond)
+    retriever = Mock(ainvoke=AsyncMock(return_value=[
+        Document(page_content="Keep records for 7 years", metadata={"source": "handbook.pdf", "category_bitmask": 1}),
+        Document(page_content="Restricted content", metadata={"source": "secret.pdf", "category_bitmask": 16}),
+    ]))
+    request = QuestionRequest(question="How long are records kept?", use_mcp=True, retrieval="tool",
+                              prompt_key=PromptKey.SOURCE, used_model="openai")
+    with (
+        patch("handle_llms.load_llm_model", return_value=model),
+        patch("retriever.create_retriever", return_value=retriever) as create,
+        patch("query_refinement.refine_query") as refine,
+    ):
+        result = await answer_with_mcp(request, Identity("alice", ("General",)), MCPConfig(servers=[]))
+    refine.assert_not_called()
+    retriever.ainvoke.assert_awaited_once_with("retention")
+    assert create.call_args.kwargs["user_roles"] == ["General"]
+    assert result["relevant_documents"] == ["handbook.pdf->Keep records for 7 years"]
+    assert {"server": "rag", "operation": "tool", "status": "ok"}.items() <= result["mcp"]["events"][0].items()
+    assert result["mcp"]["usage"] == {"model_calls": 2, "input_tokens": 400, "output_tokens": 30}
 
 
 def test_document_policy_denies_unknown_tags_and_restricted_content():

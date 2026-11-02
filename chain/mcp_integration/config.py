@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
@@ -22,7 +23,17 @@ class ServerConfig(BaseModel):
     # Explicit admin attestation that these tools are read-only. Annotations aren't trusted.
     read_only_tools: list[str] = Field(default_factory=list)
     resource_uris: list[str] = Field(default_factory=list)
+    # Optional tool name -> sha256 fingerprint of its definition (name, description,
+    # input schema). A tool whose current definition differs is not exposed.
+    pinned_tools: dict[str, str] = Field(default_factory=dict)
     allow_plain_http: bool = False
+
+    @model_validator(mode="after")
+    def check_pins(self):
+        for name, digest in self.pinned_tools.items():
+            if name not in self.read_only_tools or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise ValueError("Pins need an allowlisted tool and a sha256 hex digest")
+        return self
 
     @model_validator(mode="after")
     def check_transport(self):
