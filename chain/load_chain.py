@@ -1,4 +1,5 @@
 import langchain_core
+import langchain_core.retrievers
 import logging
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -63,7 +64,7 @@ def load_chain(context, prompt_key: PromptKey, model, include_doc_names: bool = 
     if isinstance(context, str):
         prepared_context = lambda _: context # For fixed text: text in callable
 
-    elif isinstance(context, langchain_core.vectorstores.base.VectorStoreRetriever):
+    elif isinstance(context, langchain_core.retrievers.BaseRetriever):
         if context.invoke is None:  # empty retriever
             prepared_context = lambda _: "<unknown>"
         else:  # normal retriever, but defensive against Chroma errors
@@ -75,7 +76,7 @@ def load_chain(context, prompt_key: PromptKey, model, include_doc_names: bool = 
                     docs = []
                 return format_docs(docs, include_doc_names)
     else:
-        raise ValueError(f"Unknown context type: {type(context)}. Expected str or VectorStoreRetriever.")
+        raise ValueError(f"Unknown context type: {type(context)}. Expected str or a retriever.")
 
     # Build the chain with or without chat history
     if use_chat_history:
