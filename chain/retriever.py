@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from langchain_ollama import OllamaEmbeddings
 from langchain_chroma import Chroma
 
+from hybrid_retriever import HybridRetriever
+
 load_dotenv()
 EMBEDDING_SOURCE = os.environ.get("EMBEDDING_SOURCE")  # "ollama" or "openai"
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
@@ -11,6 +13,53 @@ DEFAULT_EMBEDDING_MODEL = "nomic-embed-text"
 INDEX_NAME = os.environ.get("INDEX_NAME", "langchain-test-index")
 VECTORDB_DIR = os.environ.get("VECTORDB_DIR", "/data/vectordb")
 DISABLE_FILTER = os.environ.get("RETRIEVER_DISABLE_FILTER", "").lower() in ("1", "true", "yes") # defaults to false (filter active)
+
+SEARCH_TYPES = ("similarity", "hybrid")
+
+
+def retriever_search_type() -> str:
+    """Search type, read per call from RETRIEVER_SEARCH_TYPE: similarity (default) or hybrid."""
+    value = (os.environ.get("RETRIEVER_SEARCH_TYPE") or "similarity").strip().lower()
+    if value not in SEARCH_TYPES:
+        raise ValueError(f"RETRIEVER_SEARCH_TYPE must be one of {SEARCH_TYPES}, got {value!r}")
+    return value
+
+
+def hybrid_alpha() -> float:
+    """Dense weight of hybrid search from RETRIEVER_HYBRID_ALPHA (0 = pure BM25, 1 = pure dense)."""
+    raw = os.environ.get("RETRIEVER_HYBRID_ALPHA") or "0.5"
+    try:
+        alpha = float(raw.replace(",", "."))
+    except ValueError:
+        raise ValueError(f"RETRIEVER_HYBRID_ALPHA must be a number, got {raw!r}") from None
+    if not 0.0 <= alpha <= 1.0:
+        raise ValueError(f"RETRIEVER_HYBRID_ALPHA must be between 0 and 1, got {alpha}")
+    return alpha
+
+
+def hybrid_fetch_k():
+    """Candidates per ranking before fusion from RETRIEVER_HYBRID_FETCH_K (default 4 * k)."""
+    raw = os.environ.get("RETRIEVER_HYBRID_FETCH_K")
+    if not raw:
+        return None
+    fetch_k = int(raw)
+    if fetch_k <= 0:
+        raise ValueError(f"RETRIEVER_HYBRID_FETCH_K must be positive, got {fetch_k}")
+    return fetch_k
+
+
+def _search_retriever(vectorstore, k: int, where: dict = None):
+    """Retriever for the configured search type; ``where`` is the role filter (None = no filter)."""
+    if retriever_search_type() == "hybrid":
+        return HybridRetriever(
+            vectorstore=vectorstore,
+            k=k,
+            alpha=hybrid_alpha(),
+            fetch_k=hybrid_fetch_k(),
+            where=where,
+        )
+    search_kwargs = {"k": k} if where is None else {"k": k, "filter": where}
+    return vectorstore.as_retriever(search_type="similarity", search_kwargs=search_kwargs)
 
 
 # Tag-to-bitmask mapping for role-based filtering
@@ -78,24 +127,11 @@ def create_retriever(
         # Apply filter if necessary
         if DISABLE_FILTER or is_admin_user(user_roles):
             # No filter for admin users
-            retriever = existing_vectorstore.as_retriever(
-                search_type="similarity",
-                search_kwargs={"k": returned_docs}
-            )
-        else:
-            # Filter for specific roles
-            role_bitmask = combine_tag_bitmasks(user_roles)
-            where_filter = {"category_bitmask": role_bitmask}
-            
-            retriever = existing_vectorstore.as_retriever(
-                search_type="similarity",
-                search_kwargs={
-                    "k": returned_docs,
-                    "filter": where_filter
-                }
-            )
-        
-        return retriever
+            return _search_retriever(existing_vectorstore, returned_docs)
+        # Filter for specific roles
+        role_bitmask = combine_tag_bitmasks(user_roles)
+        where_filter = {"category_bitmask": role_bitmask}
+        return _search_retriever(existing_vectorstore, returned_docs, where_filter)
     # Use INDEX_NAME from environment if not provided
     if index_name is None:
         index_name = INDEX_NAME
@@ -168,20 +204,11 @@ def init_filtered_vectorstore(
         # IMPORTANT: similarity_score_threshold doesn't work correctly
         # Use normal similarity search with post-processing instead
         # Use similarity_score_threshold if provided (Chroma supports this in search_kwargs)
-        return vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={
-            "k": returned_docs,
-            # "similarity_score_threshold": similarity_threshold
-            },
-        )
+        return _search_retriever(vectorstore, returned_docs)
 
     # Admin users bypass all filtering
     if is_admin_user(user_roles or ["General"]):
-        return vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": returned_docs},
-        )
+        return _search_retriever(vectorstore, returned_docs)
 
     user_bitmask = combine_tag_bitmasks(user_roles or ["General"])
     
@@ -190,22 +217,13 @@ def init_filtered_vectorstore(
     # but Chroma doesn't support OR filters.
     # Solution: General users get no filter (like admins)
     if user_bitmask == 1:  # Only "General" role
-        return vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": returned_docs},
-        )
+        return _search_retriever(vectorstore, returned_docs)
     
     # For specific roles: filter only on exact bitmask matches
     if user_bitmask > 1:  # Specific roles (not just general)
         # Simple filter: only documents with exactly this bitmask
         filter_dict = {"category_bitmask": user_bitmask}
-        return vectorstore.as_retriever(
-            search_type="similarity",
-            search_kwargs={"filter": filter_dict, "k": returned_docs},
-        )
+        return _search_retriever(vectorstore, returned_docs, filter_dict)
     
     # Fallback: no filter
-    return vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k": returned_docs},
-    )
+    return _search_retriever(vectorstore, returned_docs)

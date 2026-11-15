@@ -45,5 +45,9 @@ The architecture design can be found in the associated paper of this repository.
 
 The chain service can connect to MCP servers over Streamable HTTP or stdio and use approved tools and resources alongside document retrieval. MCP is disabled by default. See [MCP setup, architecture, and research notes](docs/mcp.md) for the demo Compose profile, configuration, identity boundary, and tests.
 
+## Optional hybrid retrieval
+
+Retrieval is dense vector similarity by default. `RETRIEVER_SEARCH_TYPE=hybrid` adds BM25 keyword search and fuses both rankings, which helps with exact terms such as error codes or product numbers. See [hybrid retrieval](docs/hybrid-retrieval.md).
+
 ## Open Topics
 - Automated naming of chats 
